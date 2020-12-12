@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "AdversarialDetection", "AdversarialDetection\AdversarialDetection.pyproj", "{53974C79-E7C1-4E6F-962C-A16D0E0A5B61}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{53974C79-E7C1-4E6F-962C-A16D0E0A5B61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53974C79-E7C1-4E6F-962C-A16D0E0A5B61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A55E5DD-18DC-42E4-8154-735550A18542}
+	EndGlobalSection
+EndGlobal
