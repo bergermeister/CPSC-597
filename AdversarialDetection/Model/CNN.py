@@ -12,66 +12,33 @@ class CNN( nn.Module ):
       # Record cuda enabled flag
       self.cudaEnable = bool( cudaEnable )
 
-      # Convolutional Layer 1
+      # Convolutional Layers
       self.cl1 = nn.Sequential( 
-         nn.ConvTranspose2d( channels, 256, 4, 2, 1 ), # Convolutional Layer 1
-         nn.BatchNorm2d( 256 ) )                       # Batch Normalization 1
-
-      # Convolutional Layer 2
+         nn.Conv2d( channels, 256, 4, 2, 1 ), # Convolutional Layer 1
+         nn.BatchNorm2d( 256 ) )              # Batch Normalization 1
       self.cl2 = nn.Sequential(
-         nn.ConvTranspose2d( 256, 512, 4, 2, 1 ),      # Convolutional Layer 2
-         nn.BatchNorm2d( 512 ) )                       # Batch Normalization 2
-
-      # Convolutional Layer 3
+         nn.Conv2d( 256, 512, 4, 2, 1 ),      # Convolutional Layer 2
+         nn.BatchNorm2d( 512 ) )              # Batch Normalization 2
       self.cl3 = nn.Sequential(
-         nn.ConvTranspose2d( 512, 1024, 4, 2, 1 ),     # Convolutional Layer 3
-         nn.BatchNorm2d( 1024 ) )                      # Batch Normalization 3
+         nn.Conv2d( 512, 1024, 4, 2, 1 ),     # Convolutional Layer 3
+         nn.BatchNorm2d( 1024 ) )             # Batch Normalization 3
       
       # Linear Layers
-      self.ll1 = nn.Linear( 1024 * 4 * 4, 120 )
-      self.ll2 = nn.Linear( 120, 10 )
+      self.ll1 = nn.Linear( 1024 * 4 * 4, 10 )
+
+      if( self.cudaEnable ):
+         self.cuda( )
             
    def forward( self, x ):
-      # Run through Convolutional Layer 1
-      #torch.cuda.empty_cache( )
-      self.cl1.cuda( )
-      x = F.relu( self.cl1( x ) )
-      self.cl1.cpu( )
-      
-      # Run through Convolutional Layer 2
+      # Debug Commands
       #print( torch.cuda.memory_summary( device = None, abbreviated = False ) )
       #torch.cuda.empty_cache( )
-      self.cl2.cuda( )
-      #print( torch.cuda.memory_summary( device = None, abbreviated = False ) )
-      x = F.relu( self.cl2( x ) )
-      self.cl2.cpu( )
-
-      # Run through Convolutional Layer 3
-      #print( torch.cuda.memory_summary( device = None, abbreviated = False ) )
-      #torch.cuda.empty_cache( )
-      self.cl3.cuda( )
-      #print( torch.cuda.memory_summary( device = None, abbreviated = False ) )
-      x = F.relu( self.cl3( x ) )
-      self.cl3.cpu( )
-
-      # Max Pooling
-      x = F.max_pool2d( x, kernel_size = 2, stride = 2 )
-      
-      # Flatten
-      x = x.reshape( -1, 1024 )
-
-      # Run through Linear Layer 1
-      x = self.ll1( x )
-      x = F.relu( x )
-
-      # Run through Linear Layer 2
-      x = self.ll2( x )
-      x = F.sigmoid( x )
-
-      # Run through Linear Layer 3
-      #x = self.ll3( x )
-      #x = F.sigmoid( x )
-
+      x = F.relu( self.cl1( x ) )                           # Convolutional Layer 1
+      x = F.relu( self.cl2( x ) )                           # Convolutional Layer 2
+      x = F.relu( self.cl3( x ) )                           # Convolutional Layer 3
+      #x = F.max_pool2d( x, kernel_size = 2, stride = 2 )    # Max Pooling
+      x = x.reshape( -1, 1024 * 4 * 4 )                     # Flatten
+      x = torch.sigmoid( self.ll1( x ) )                    # Linear Layer 1
       return( x )
 
    def Train( self, loader, epochs, batch_size ):
@@ -81,6 +48,7 @@ class CNN( nn.Module ):
 
       optimizer = torch.optim.Adam( self.parameters( ), lr = 0.0002, weight_decay = 0.00001 )
 
+      print( "Begin Training..." )
       for epoch in range( epochs ):
          beginEpoch = time( )
          
@@ -97,7 +65,8 @@ class CNN( nn.Module ):
             totalCorrect += preds.argmax( dim = 1 ).eq( labels ).sum( ).item( )
             totalLoss += loss.item( )
 
-         print( f'epoch #{epoch} | loss: {totalLoss}' )
+         print( f'epoch #{epoch} | loss: {loss}' )
+      print( f"End Training... loss: {totalLoss}" )
 
    def GetVariable( self, arg ):
       var = None
