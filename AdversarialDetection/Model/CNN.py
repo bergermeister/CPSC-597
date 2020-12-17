@@ -12,6 +12,8 @@ class CNN( nn.Module ):
 
       # Record cuda enabled flag
       self.cudaEnable = bool( cudaEnable )
+      self.accuracy   = 0
+      self.epochs     = 0
 
       # Convolutional Layers
       self.cl1 = nn.Sequential( 
@@ -76,7 +78,7 @@ class CNN( nn.Module ):
             correct      += predicted.eq( labels ).sum( ).item( )
 
             progress.Update( batchIndex, len( loader ), 'Epoch: %d | Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+                             % ( self.epochs + epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
       print( 'End Training...' )
 
    def Test( self, loader, batch_size ):
