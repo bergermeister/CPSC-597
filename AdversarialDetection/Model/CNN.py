@@ -1,3 +1,6 @@
+##
+# @package CNN
+#
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -5,7 +8,11 @@ from torch.autograd import Variable
 from time import time
 from Utility.ProgressBar import ProgressBar
 
-# Deep Convolutional Neural Network
+## Deep Convolutional Neural Network
+# 
+# @details
+# @par
+# This class provides the Deep Convolutional Neural Network with 3 Convolutional Layers and 1 Linear Layer.
 class CNN( nn.Module ):
    def __init__( self, channels, cudaEnable ):
       super( ).__init__( )

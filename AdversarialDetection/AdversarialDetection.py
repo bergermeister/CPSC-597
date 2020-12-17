@@ -1,3 +1,5 @@
+## @package AdversarialDetection
+# 
 import sys
 import os
 import argparse
@@ -5,7 +7,14 @@ import torch
 from Model.CNN import CNN
 from Utility.Data import Data
 
-def main( ):
+##
+# @brief
+# Application Entry
+#
+# @details
+# @par
+# This method is the application entry point.
+def Main( ):
    print( "Parsing Arguments" )
    parser = argparse.ArgumentParser( description = "CPSC-597" )
    parser.add_argument( '--dataset',    type = str, default = 'mnist',     choices = [ 'mnist' ] )
@@ -38,7 +47,10 @@ def main( ):
    elif( args.mode == 'test' ):
       acc = model.Test( data.test_loader, args.batch_size )
 
-def save( model, acc, epoch, path ):
+##
+# @brief
+# Save Model
+def Save( model, acc, epoch, path ):
    print( 'Saving...' )
    state = {
       'model': model.state_dict( ),
@@ -49,5 +61,5 @@ def save( model, acc, epoch, path ):
    print( 'Save complete.' )
 
 if __name__ == "__main__":
-   sys.exit( int( main( ) or 0 ) )
+   sys.exit( int( Main( ) or 0 ) )
    
