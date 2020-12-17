@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 from time import time
+from Utility.ProgressBar import ProgressBar
 
 # Deep Convolutional Neural Network
 class CNN( nn.Module ):
@@ -26,6 +27,9 @@ class CNN( nn.Module ):
       # Linear Layers
       self.ll1 = nn.Linear( 1024 * 4 * 4, 10 )
 
+      # Define Loss Criteria
+      self.loss = nn.CrossEntropyLoss( )
+
       if( self.cudaEnable ):
          self.cuda( )
             
@@ -42,32 +46,65 @@ class CNN( nn.Module ):
       return( x )
 
    def Train( self, loader, epochs, batch_size ):
-      beginTrain = time( )
-      totalLoss = 0
-      totalCorrect = 0
+      self.train( True ) # Place the model into training mode
 
+      progress = ProgressBar( 40, 80 )
+      beginTrain = time( )
       optimizer = torch.optim.Adam( self.parameters( ), lr = 0.0002, weight_decay = 0.00001 )
 
       print( "Begin Training..." )
       for epoch in range( epochs ):
          beginEpoch = time( )
-         
-         for ( images, labels ) in loader:
+
+         trainLoss = 0
+         total     = 0
+         correct   = 0
+         for batchIndex, ( images, labels ) in enumerate( loader ):
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
-            preds = self( images )
-            loss = F.cross_entropy( preds, labels )
+            outputs = self( images )
+            loss = self.loss( outputs, labels )
+            #loss = F.cross_entropy( output, labels )
 
             optimizer.zero_grad( )  # Clear Gradients
             loss.backward( )        # Calculate Gradients
             optimizer.step( )       # Update Weights
 
-            totalCorrect += preds.argmax( dim = 1 ).eq( labels ).sum( ).item( )
-            totalLoss += loss.item( )
+            _, predicted = outputs.max( 1 )
+            trainLoss    += loss.item( )
+            total        += labels.size( 0 )
+            correct      += predicted.eq( labels ).sum( ).item( )
 
-         print( f'epoch #{epoch} | loss: {loss}' )
-      print( f"End Training... loss: {totalLoss}" )
+            progress.Update( batchIndex, len( loader ), 'Epoch: %d | Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                             % ( epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+      print( 'End Training...' )
 
+   def Test( self, loader, batch_size ):
+      self.eval( ) # Place the model into test/evaluation mode
+      progress = ProgressBar( 40, 80 )
+
+      testLoss = 0
+      total    = 0
+      correct  = 0
+
+      print( 'Begin Evaluation...' )
+      with torch.no_grad( ):
+         for batchIndex, ( images, labels ) in enumerate( loader ):
+            images, labels = images.cuda( ), labels.cuda( )
+            outputs = self( images )
+            loss    = self.loss( outputs, labels )
+
+            _, predicted = outputs.max( 1 )
+            testLoss += loss.item( )            
+            total    += labels.size( 0 )
+            correct  += predicted.eq( labels ).sum( ).item( )
+
+            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+      print( 'End Evaluation...' )
+
+      return( 100. * correct / total )
+     
    def GetVariable( self, arg ):
       var = None
       if( self.cudaEnable == True ):
