@@ -22,7 +22,7 @@ def Main( ):
    parser.add_argument( '--batch_size', type = int, default = 64,          help = 'Size of a batch' )
    parser.add_argument( '--mode',       type = str, default = 'train',     choices = [ 'train', 'test' ] )
    parser.add_argument( '--epochs',     type = int, default = 50,          help = 'The number of epochs to run')
-   parser.add_argument( '--cuda',       type = str, default = True,        help = 'Availability of cuda' )
+   parser.add_argument( '--cuda',       type = str, default = 'True',      help = 'Availability of cuda' )
    parser.add_argument( '--cnn',        type = str, default = 'cnn.state', help = 'Path to CNN Model State' )
    args = parser.parse_args( )
 
@@ -43,7 +43,7 @@ def Main( ):
       model.Train( data.train_loader, args.epochs, args.batch_size )
       acc = model.Test( data.test_loader, args.batch_size )
       if( acc > model.accuracy ):
-         save( model, acc, model.epochs + args.epochs, args.cnn )
+         Save( model, acc, model.epochs + args.epochs, args.cnn )
    elif( args.mode == 'test' ):
       acc = model.Test( data.test_loader, args.batch_size )
 
