@@ -24,17 +24,17 @@ class CNN( nn.Module ):
 
       # Convolutional Layers
       self.cl1 = nn.Sequential( 
-         nn.Conv2d( channels, 16, 4, 2, 1 ), # Convolutional Layer 1
-         nn.BatchNorm2d( 16 ) )              # Batch Normalization 1
+         nn.Conv2d( channels, 256, 4, 2, 1 ), # Convolutional Layer 1
+         nn.BatchNorm2d( 256 ) )              # Batch Normalization 1
       self.cl2 = nn.Sequential(
-         nn.Conv2d( 16, 32, 4, 2, 1 ),      # Convolutional Layer 2
-         nn.BatchNorm2d( 32 ) )              # Batch Normalization 2
+         nn.Conv2d( 256, 512, 4, 2, 1 ),      # Convolutional Layer 2
+         nn.BatchNorm2d( 512 ) )              # Batch Normalization 2
       self.cl3 = nn.Sequential(
-         nn.Conv2d( 32, 64, 4, 2, 1 ),     # Convolutional Layer 3
-         nn.BatchNorm2d( 64 ) )             # Batch Normalization 3
+         nn.Conv2d( 512, 1024, 4, 2, 1 ),     # Convolutional Layer 3
+         nn.BatchNorm2d( 1024 ) )             # Batch Normalization 3
       
       # Linear Layers
-      self.ll1 = nn.Linear( 64 * 4 * 4, 10 )
+      self.ll1 = nn.Linear( 1024 * 4 * 4, 10 )
 
       # Define Loss Criteria
       self.loss = nn.CrossEntropyLoss( )
@@ -50,7 +50,7 @@ class CNN( nn.Module ):
       x = F.relu( self.cl2( x ) )                           # Convolutional Layer 2
       x = F.relu( self.cl3( x ) )                           # Convolutional Layer 3
       #x = F.max_pool2d( x, kernel_size = 2, stride = 2 )    # Max Pooling
-      x = x.reshape( -1, 64 * 4 * 4 )                     # Flatten
+      x = x.reshape( -1, 1024 * 4 * 4 )                     # Flatten
       x = torch.sigmoid( self.ll1( x ) )                    # Linear Layer 1
       return( x )
 
