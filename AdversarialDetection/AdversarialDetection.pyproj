@@ -14,7 +14,7 @@
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=mnist --data_path=E:\Projects\Dataset\mnist\processed --batch_size=64 --mode=train --epochs=2 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model</CommandLineArguments>
+    <CommandLineArguments>--dataset=mnist --data_path=E:\Projects\Dataset\mnist\processed --batch_size=1 --mode=adversary --epochs=2 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,6 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AdversarialDetection.py" />
+    <Compile Include="Model\Adversary.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Model\CNN.py" />
     <Compile Include="Utility\Data.py" />
     <Compile Include="Utility\ProgressBar.py">

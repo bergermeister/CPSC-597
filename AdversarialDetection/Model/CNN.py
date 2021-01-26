@@ -113,7 +113,10 @@ class CNN( nn.Module ):
       print( 'End Evaluation...' )
 
       return( 100. * correct / total )
-     
+   
+   def Evaluate( self ):
+      return( 0 )
+
    def GetVariable( self, arg ):
       var = None
       if( self.cudaEnable == True ):
