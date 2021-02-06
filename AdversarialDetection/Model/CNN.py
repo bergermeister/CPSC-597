@@ -21,6 +21,7 @@ class CNN( nn.Module ):
       self.cudaEnable = ( cudaEnable == 'True' )
       self.accuracy   = 0
       self.epochs     = 0
+      self.interm     = []
 
       # Convolutional Layers
       self.cl1 = nn.Sequential( 
@@ -31,8 +32,8 @@ class CNN( nn.Module ):
          nn.BatchNorm2d( 512 ) )              # Batch Normalization 2
       self.cl3 = nn.Sequential(
          nn.Conv2d( 512, 1024, 4, 2, 1 ),     # Convolutional Layer 3
-         nn.BatchNorm2d( 1024 ) )             # Batch Normalization 3
-      
+         nn.BatchNorm2d( 1024 ) )             # Batch Normalization 3            
+
       # Linear Layers
       self.ll1 = nn.Linear( 1024 * 4 * 4, 10 )
 
@@ -43,15 +44,27 @@ class CNN( nn.Module ):
          self.cuda( )
             
    def forward( self, x ):
-      # Debug Commands
-      #print( torch.cuda.memory_summary( device = None, abbreviated = False ) )
-      #torch.cuda.empty_cache( )
+      self.interm = []
+      dl1 = nn.ConvTranspose2d(  256, 1, 1, 2, 0 ).cuda( )
+      dl1.weight.data.fill_( 1 )
+      dl1.bias.data.fill_( 0 )
+      dl2 = nn.ConvTranspose2d(  512, 1, 1, 4, 0 ).cuda( )
+      dl2.weight.data.fill_( 1 )
+      dl2.bias.data.fill_( 0 )
+      dl3 = nn.ConvTranspose2d( 1024, 1, 1, 8, 0 ).cuda( )
+      dl3.weight.data.fill_( 1 )
+      dl3.bias.data.fill_( 0 )
+
       x = F.relu( self.cl1( x ) )                           # Convolutional Layer 1
+      self.interm.append( dl1( x ).detach( ) )
       x = F.relu( self.cl2( x ) )                           # Convolutional Layer 2
+      self.interm.append( dl2( x ).detach( ) )
       x = F.relu( self.cl3( x ) )                           # Convolutional Layer 3
+      self.interm.append( dl3( x ).detach() )
       #x = F.max_pool2d( x, kernel_size = 2, stride = 2 )    # Max Pooling
       x = x.reshape( -1, 1024 * 4 * 4 )                     # Flatten
       x = torch.sigmoid( self.ll1( x ) )                    # Linear Layer 1
+
       return( x )
 
    def Train( self, loader, epochs, batch_size ):
