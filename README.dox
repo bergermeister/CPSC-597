@@ -1,11 +1,41 @@
 /**
- * @mainpage
- * # Adversial Input Detection
- *
- * ## Usage
- * ### Training
- *
- *
- * ### Evaluation
- *
+@mainpage
+# Adversial Input Detection
+
+## Usage
+<table>
+   <tr><th> Mode <th> Command
+   <tr>  <td> Trainig 
+         <td> 
+            <pre>
+python AdversarialDetection.py --dataset=mnist 
+                               --data_path=E:\Projects\Dataset\mnist\processed 
+                               --batch_size=64 
+                               --mode=train 
+                               --epochs=2 
+                               --cuda=True 
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+            </pre>
+   <tr>  <td> Evaluation
+         <td>
+            <pre>
+python AdversarialDetection.py --dataset=mnist 
+                               --data_path=E:\Projects\Dataset\mnist\processed 
+                               --batch_size=64 
+                               --mode=test 
+                               --cuda=True 
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+            </pre>
+   <tr>  <td> Adversarial
+         <td>
+            <pre>
+python AdversarialDetection.py --dataset=mnist 
+                               --data_path=E:\Projects\Dataset\mnist\processed 
+                               --batch_size=1
+                               --mode=adversary 
+                               --epsilon=0.1
+                               --cuda=True 
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+            </pre>
+</table>
  */

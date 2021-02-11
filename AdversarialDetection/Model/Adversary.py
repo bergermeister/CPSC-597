@@ -3,8 +3,8 @@ from torch.nn import functional as F
 
 class Adversary( object ):
    def __init__( self, model ):
-      
       self.model = model
+      self.activation = {}
 
    def CreateImage( self, image, epsilon, data_grad ):
       # Collect the element-wise sign of the data gradient
@@ -17,6 +17,14 @@ class Adversary( object ):
       return( perturbed_image )
 
    def Attack( self, test_loader, epsilon ):
+      def getActivation( name ):
+         def hook( model, input, output ):
+            self.activation[ name ] = output.detach( )
+         return( hook )
+
+      # Attach hook for activations
+      self.model.cl1.register_forward_hook( getActivation( 'cl1' ) )
+
       # Accuracy counter
       correct = 0
       adv_examples = []
@@ -32,8 +40,10 @@ class Adversary( object ):
          data.requires_grad = True
 
          # Forward pass the data through the model
+         self.activation = {}
          output = self.model( data )
          init_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
+         init_act  = self.activation[ 'cl1' ].squeeze( )
 
          # If the initial prediction is wrong, dont bother attacking, just move on
          if init_pred[ 0 ].item( ) != target[ 0 ].item( ):
@@ -55,7 +65,9 @@ class Adversary( object ):
          perturbed_data = self.CreateImage( data, epsilon, data_grad )
 
          # Re-classify the perturbed image
+         self.activation = {}
          output = self.model( perturbed_data )
+         final_act = self.activation[ 'cl1' ].squeeze( )
 
          # Check for success
          final_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
@@ -64,12 +76,12 @@ class Adversary( object ):
             # Special case for saving 0 epsilon examples
             if (epsilon == 0) and (len(adv_examples) < 5):
                   adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, self.model.interm ) )
+                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act ) )
          else:
             # Save some adv examples for visualization later
             if len(adv_examples) < 5:
                   adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, self.model.interm ) )
+                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act ) )
 
       # Calculate final accuracy for this epsilon
       final_acc = correct/float(len(test_loader))

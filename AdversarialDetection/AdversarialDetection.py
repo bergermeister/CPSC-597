@@ -12,6 +12,8 @@ from Model.CNN import CNN
 from Model.Adversary import Adversary
 from Utility.Data import Data
 
+activation = {}
+
 ##
 # @brief
 # Application Entry
@@ -27,6 +29,7 @@ def Main( ):
    parser.add_argument( '--batch_size', type = int, default = 64,          help = 'Size of a batch' )
    parser.add_argument( '--mode',       type = str, default = 'train',     choices = [ 'train', 'test', 'adversary' ] )
    parser.add_argument( '--epochs',     type = int, default = 50,          help = 'The number of epochs to run')
+   parser.add_argument( '--epsilon',    type = float, default = 0.1,       help = 'Perturbed image pixel adjustment factor' )
    parser.add_argument( '--cuda',       type = str, default = 'True',      help = 'Availability of cuda' )
    parser.add_argument( '--cnn',        type = str, default = 'cnn.state', help = 'Path to CNN Model State' )
    args = parser.parse_args( )
@@ -52,7 +55,8 @@ def Main( ):
    elif( args.mode == 'test' ):
       acc = model.Test( data.test_loader, args.batch_size )
    elif( args.mode == 'adversary' ):
-      epsilons = [ .1 ] #[ 0, .05, .1, .15, .2, .25, .3 ]
+      #model.cl1.register_forward_hook( get_activation( 'cl1' ) )
+      epsilon = args.epsilon
       adversary = Adversary( model )
 
       ######################################################################
@@ -70,20 +74,29 @@ def Main( ):
       accuracies = []
       examples = []
 
-      # Run test for each epsilon
-      for eps in epsilons:
-         acc, ex = adversary.Attack( data.test_loader, eps )
-         accuracies.append( acc )
-         examples.append( ex )
-         for i in range( len( ex ) ):
-            example = im.fromarray( ( ex[ i ][ 2 ] * 255 ).astype( 'uint8' ) )
-            example.save( 'Images/Example{}From{}To{}.png'.format( i, ex[ i ][ 0 ], ex[ i ][ 1 ] ) )
-            for j in range( len( ex[ i ][ 3 ] ) ):
-               example = ex[ i ][ 3 ][ j ][ 0 ][ 0 ]
-               example = example.cpu()
-               example = example.numpy()
-               example = im.fromarray( ( example * 255 ).astype( 'uint8' ) )
-               example.save( 'Images/Example{}Layer{}.png'.format( i, j ) )
+      acc, ex = adversary.Attack( data.test_loader, epsilon )
+      accuracies.append( acc )
+      examples.append( ex )
+      for i in range( len( ex ) ):
+         init_pred = ex[ i ][ 0 ]
+         final_pred = ex[ i ][ 1 ]
+         example    = ex[ i ][ 2 ]
+         init_act   = ex[ i ][ 3 ]
+         final_act  = ex[ i ][ 4 ]
+         example = im.fromarray( ( ex[ i ][ 2 ] * 255 ).astype( 'uint8' ) )
+         example.save( 'Images/Eps{}Example{}From{}To{}.png'.format( epsilon, i, init_pred, final_pred ) )
+         for j in range( init_act.size( 0 ) ):
+            example = init_act[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( example * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/Eps{}Example{}From{}To{}Act{}Init.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         for j in range( final_act.size( 0 ) ):
+            example = final_act[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( example * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/Eps{}Example{}From{}To{}Act{}Final.png'.format( epsilon, i, init_pred, final_pred, j ) )
 
 ##
 # @brief
@@ -105,6 +118,11 @@ def Save( model, acc, epoch, path ):
    }
    torch.save( state, path )
    print( 'Save complete.' )
+
+def get_activation( name ):
+   def hook( model, input, output ):
+      activation[ name ] = output.detach( )
+   return( hook )
 
 if __name__ == "__main__":
    sys.exit( int( Main( ) or 0 ) )
