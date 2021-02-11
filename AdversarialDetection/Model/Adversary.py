@@ -24,6 +24,8 @@ class Adversary( object ):
 
       # Attach hook for activations
       self.model.cl1.register_forward_hook( getActivation( 'cl1' ) )
+      self.model.cl2.register_forward_hook( getActivation( 'cl2' ) )
+      self.model.cl3.register_forward_hook( getActivation( 'cl3' ) )
 
       # Accuracy counter
       correct = 0
@@ -43,7 +45,7 @@ class Adversary( object ):
          self.activation = {}
          output = self.model( data )
          init_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
-         init_act  = self.activation[ 'cl1' ].squeeze( )
+         init_act  = self.activation
 
          # If the initial prediction is wrong, dont bother attacking, just move on
          if init_pred[ 0 ].item( ) != target[ 0 ].item( ):
@@ -67,7 +69,7 @@ class Adversary( object ):
          # Re-classify the perturbed image
          self.activation = {}
          output = self.model( perturbed_data )
-         final_act = self.activation[ 'cl1' ].squeeze( )
+         final_act = self.activation
 
          # Check for success
          final_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability

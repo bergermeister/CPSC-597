@@ -83,20 +83,51 @@ def Main( ):
          example    = ex[ i ][ 2 ]
          init_act   = ex[ i ][ 3 ]
          final_act  = ex[ i ][ 4 ]
-         example = im.fromarray( ( ex[ i ][ 2 ] * 255 ).astype( 'uint8' ) )
-         example.save( 'Images/Eps{}Example{}From{}To{}.png'.format( epsilon, i, init_pred, final_pred ) )
-         for j in range( init_act.size( 0 ) ):
-            example = init_act[ j ]
+         example = im.fromarray( ( ( ( ex[ i ][ 2 ] - ex[ i ][ 2 ].min( ) ) / ex[ i ][ 2 ].max( ) ) * 255 ).astype( 'uint8' ) )
+         example.save( 'Images/eps{}_{}_{}-{}.png'.format( epsilon, i, init_pred, final_pred ) )
+
+         cl1 = init_act[ 'cl1' ].squeeze( )
+         for j in range( cl1.size( 0 ) ):
+            example = cl1[ j ]
             example = example.cpu()
             example = example.numpy()
-            example = im.fromarray( ( example * 255 ).astype( 'uint8' ) )
-            example.save( 'Images/Eps{}Example{}From{}To{}Act{}Init.png'.format( epsilon, i, init_pred, final_pred, j ) )
-         for j in range( final_act.size( 0 ) ):
-            example = final_act[ j ]
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act1Init.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         cl1 = final_act[ 'cl1' ].squeeze( )
+         for j in range( cl1.size( 0 ) ):
+            example = cl1[ j ]
             example = example.cpu()
             example = example.numpy()
-            example = im.fromarray( ( example * 255 ).astype( 'uint8' ) )
-            example.save( 'Images/Eps{}Example{}From{}To{}Act{}Final.png'.format( epsilon, i, init_pred, final_pred, j ) )
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act1Final.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         cl2 = init_act[ 'cl2' ].squeeze( )
+         for j in range( cl2.size( 0 ) ):
+            example = cl2[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act2Init.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         cl2 = final_act[ 'cl2' ].squeeze( )
+         for j in range( cl2.size( 0 ) ):
+            example = cl2[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act2Final.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         cl3 = init_act[ 'cl3' ].squeeze( )
+         for j in range( cl3.size( 0 ) ):
+            example = cl3[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act3Init.png'.format( epsilon, i, init_pred, final_pred, j ) )
+         cl3 = final_act[ 'cl3' ].squeeze( )
+         for j in range( cl3.size( 0 ) ):
+            example = cl3[ j ]
+            example = example.cpu()
+            example = example.numpy()
+            example = im.fromarray( ( ( ( example - example.min( ) ) / example.max( ) ) * 255 ).astype( 'uint8' ) )
+            example.save( 'Images/eps{}_{}_{}-{}FM{}Act3Final.png'.format( epsilon, i, init_pred, final_pred, j ) )
 
 ##
 # @brief
