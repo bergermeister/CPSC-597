@@ -47,9 +47,23 @@ class CNN( nn.Module ):
          self.cuda( )
             
    def forward( self, x ):
+      self.interm = []
+      dl1 = nn.ConvTranspose2d(  16, 1, 1, 1, 0 ).cuda( )
+      dl1.weight.data.fill_( 1 )
+      dl1.bias.data.fill_( 0 )
+      dl2 = nn.ConvTranspose2d(  32, 16, 1, 1, 0 ).cuda( )
+      dl2.weight.data.fill_( 1 )
+      dl2.bias.data.fill_( 0 )
+      dl3 = nn.ConvTranspose2d( 64, 32, 1, 1, 0 ).cuda( )
+      dl3.weight.data.fill_( 1 )
+      dl3.bias.data.fill_( 0 )
+
       x = F.relu( self.cl1( x ) )                           # Convolutional Layer 1
+      self.interm.append( dl1( x ).detach( ) )
       x = F.relu( self.cl2( x ) )                           # Convolutional Layer 2
+      self.interm.append( dl1( dl2( x ) ).detach( ) )
       x = F.relu( self.cl3( x ) )                           # Convolutional Layer 3
+      self.interm.append( dl1( dl2( dl3( x ) ) ).detach( ) )
       x = self.mp( x )                                      # Max pool
       x = x.reshape( -1,  64 * 13 * 13 )                    # Flatten
       x = torch.sigmoid( self.ll1( x ) )                    # Linear Layer 1

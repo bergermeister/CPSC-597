@@ -46,6 +46,7 @@ class Adversary( object ):
          output = self.model( data )
          init_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
          init_act  = self.activation
+         init_int  = self.model.interm
 
          # If the initial prediction is wrong, dont bother attacking, just move on
          if init_pred[ 0 ].item( ) != target[ 0 ].item( ):
@@ -70,6 +71,7 @@ class Adversary( object ):
          self.activation = {}
          output = self.model( perturbed_data )
          final_act = self.activation
+         final_int = self.model.interm
 
          # Check for success
          final_pred = output.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
@@ -78,12 +80,12 @@ class Adversary( object ):
             # Special case for saving 0 epsilon examples
             if (epsilon == 0) and (len(adv_examples) < 5):
                   adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act ) )
+                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act, init_int, final_int ) )
          else:
             # Save some adv examples for visualization later
             if len(adv_examples) < 5:
                   adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act ) )
+                  adv_examples.append( ( init_pred[ 0 ].item( ), final_pred[ 0 ].item( ), adv_ex, init_act, final_act, init_int, final_int ) )
 
       # Calculate final accuracy for this epsilon
       final_acc = correct/float(len(test_loader))
