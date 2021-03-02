@@ -118,10 +118,10 @@ class Encoder( nn.Module ):
 
             progress.Update( batchIndex, len( loader ), 'Batch: {} | Loss: {}'.format( batchIndex, total ) )
 
-         for i in range( len( images ) ):
-            utils.save_image( images[ i ], 'Images/Batch{}-{}I.png'.format( batch_size, i ) )
-            #utils.save_image( encoded[ i ].reshape( 3, 16, 16 ), 'Images/Batch{}-{}E.png'.format( batch_size, i ) )
-            utils.save_image( decoded[ i ], 'Images/Batch{}-{}D.png'.format( batch_size, i ) )
+            for i in range( len( images ) ):
+               utils.save_image( images[ i ], 'Images/Batch{}-{}I.png'.format( batchIndex, i ) )
+               #utils.save_image( encoded[ i ].reshape( 3, 16, 16 ), 'Images/Batch{}-{}E.png'.format( batch_size, i ) )
+               utils.save_image( decoded[ i ], 'Images/Batch{}-{}D.png'.format( batchIndex, i ) )
 
       print( 'End Evaluation...' )
 

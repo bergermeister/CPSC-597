@@ -87,7 +87,7 @@ def Main( ):
       encoder.eval( )
       classifier.eval( )
 
-      model = classifier
+      model = cnn
 
       epsilon = args.epsilon
       adversary = Adversary( model )
