@@ -1,4 +1,6 @@
 import torch
+import foolbox
+import Utility.DataManagerPytorch as DMP
 from torch.nn import functional as F
 
 class Adversary( object ):
@@ -93,6 +95,48 @@ class Adversary( object ):
 
       # Return the accuracy and an adversarial example
       return( final_acc, adv_examples )
+
+   #PGD attack method using Foolbox
+   #Returns a dataloader with the adversarial samples and the target labels  
+   def PGDAttack( self, device, dataLoader, epsilonMax, epsilonStep, numSteps, clipMin, clipMax, targeted ):
+      self.model.eval() #Change model to evaluation mode for the attack 
+      #Wrap the model using Foolbox's Pytorch wrapper 
+      fmodel = foolbox.PyTorchModel( self.model, bounds=(clipMin, clipMax))
+      #Create attack variable 
+      attack = foolbox.attacks.LinfPGD(abs_stepsize=epsilonStep, steps=numSteps)
+      #Generate variables for storing the adversarial examples 
+      numSamples = len(dataLoader.dataset) #Get the total number of samples to attack
+      xShape = DMP.GetOutputShape(dataLoader) #Get the shape of the input (there may be easier way to do this)
+      xAdv = torch.zeros(numSamples, xShape[0], xShape[1], xShape[2])
+      yClean = torch.zeros(numSamples, dtype = torch.long)
+      advSampleIndex = 0 
+      batchSize = 0 #just do dummy initalization, will be filled in later 
+      tracker = 0
+
+      result = []
+      #Go through and generate the adversarial samples in batches 
+      for i, (xCurrent, yCurrent) in enumerate(dataLoader):
+         batchSize = xCurrent.shape[0] #Get the batch size so we know indexing for saving later
+         tracker = tracker + batchSize
+         #print("Processing up to sample=", tracker)
+         xCurrentCuda = xCurrent.to(device) #Load the data into the GPU
+         yCurrentCuda = yCurrent.type(torch.LongTensor).to(device)
+         if targeted == True:
+            criterion = foolbox.criteria.TargetedMisclassification(yCurrentCuda)
+         else:
+            criterion = foolbox.criteria.Misclassification(yCurrentCuda)
+         #Next line actually runs the attack 
+         _, advs, success = attack(fmodel, xCurrentCuda, epsilons=epsilonMax, criterion=criterion)
+         result.append( success )
+         #Save the adversarial samples 
+         for j in range(0, batchSize):
+            xAdv[advSampleIndex] = advs[j]
+            yClean[advSampleIndex] = yCurrent[j]
+            advSampleIndex = advSampleIndex+1 #increment the sample index 
+      #All samples processed, now time to save in a dataloader and return 
+      advLoader = DMP.TensorToDataLoader(xAdv, yClean, transforms= None, batchSize= dataLoader.batch_size, randomizer=None) #use the same batch size as the original loader
+      return advLoader, result
+
 
    #def Plot( self ):
       ######################################################################

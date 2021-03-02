@@ -1,6 +1,6 @@
-python AdversarialDetection.py --dataset=mnist                                 ^
-                               --data_path=E:\Projects\Dataset\mnist\processed ^
+python AdversarialDetection.py --dataset=cifar10                               ^
+                               --data_path=E:\Projects\Dataset\cifar10         ^
                                --batch_size=64                                 ^
                                --mode=test                                     ^
                                --cuda=True                                     ^
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10.model

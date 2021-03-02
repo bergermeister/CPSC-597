@@ -15,6 +15,14 @@ python AdversarialDetection.py --dataset=mnist
                                --epochs=2 
                                --cuda=True 
                                --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+                               
+python AdversarialDetection.py --dataset=cifar10 
+                               --data_path=E:\Projects\Dataset\cifar10
+                               --batch_size=64 
+                               --mode=train 
+                               --epochs=150
+                               --cuda=True 
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10.model
             </pre>
    <tr>  <td> Evaluation
          <td>

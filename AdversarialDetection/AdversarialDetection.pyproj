@@ -14,7 +14,7 @@
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=mnist --data_path=E:\Projects\Dataset\mnist\processed --batch_size=1 --mode=adversary --epochs=2 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model</CommandLineArguments>
+    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=encoder --epsilon=0.05 --epochs=350 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -33,8 +33,15 @@
     <Compile Include="Model\Adversary.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Model\Classifier.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Model\CNN.py" />
+    <Compile Include="Model\Encoder.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Utility\Data.py" />
+    <Compile Include="Utility\DataManagerPytorch.py" />
     <Compile Include="Utility\ProgressBar.py">
       <SubType>Code</SubType>
     </Compile>

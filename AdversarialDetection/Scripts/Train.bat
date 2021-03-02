@@ -1,7 +1,29 @@
-python AdversarialDetection.py --dataset=mnist                                 ^
-                               --data_path=E:\Projects\Dataset\mnist\processed ^
-                               --batch_size=64                                 ^
-                               --mode=train                                    ^
-                               --epochs=2                                      ^
-                               --cuda=True                                     ^
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model 
+python AdversarialDetection.py --dataset=cifar10                                                                     ^
+                               --data_path=E:\Projects\Dataset\cifar10                                               ^
+                               --batch_size=64                                                                       ^
+                               --mode=train                                                                     ^
+                               --epochs=250                                                                          ^
+                               --cuda=True                                                                           ^
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model                ^
+                               --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model        ^
+                               --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model
+
+python AdversarialDetection.py --dataset=cifar10                                                                     ^
+                               --data_path=E:\Projects\Dataset\cifar10                                               ^
+                               --batch_size=64                                                                       ^
+                               --mode=encoder                                                                        ^
+                               --epochs=250                                                                          ^
+                               --cuda=True                                                                           ^
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model                ^
+                               --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model        ^
+                               --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model
+                               
+python AdversarialDetection.py --dataset=cifar10                                                                     ^
+                               --data_path=E:\Projects\Dataset\cifar10                                               ^
+                               --batch_size=64                                                                       ^
+                               --mode=classifier                                                                     ^
+                               --epochs=250                                                                          ^
+                               --cuda=True                                                                           ^
+                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model                ^
+                               --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model        ^
+                               --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model
