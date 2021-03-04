@@ -90,30 +90,72 @@ def Main( ):
       adversary = Adversary( cnn )
       
       print( "Generating Adversarial Images" )
-      advloader, success = adversary.PGDAttack( "cuda", data.test_loader, epsilon, epsilon / 10.0, 10, -1, 1, False )
+      advloader, results = adversary.PGDAttack( "cuda", data.test_loader, epsilon, epsilon / 10.0, 10, -1, 1, False )
       print( "Evaluating Normal Images" )
       accuracies.append( cnn.Test( data.test_loader, args.batch_size ) )
       print( "Evaluating Adversarial Images" )
       accuracies.append( cnn.Test( advloader, args.batch_size ) )
 
-      for batchIndex, ( images, labels ) in enumerate( advloader ):
+      for batchIndex in range( len( results ) ):
+         batch = results[ batchIndex ]
          if( cnn.cudaEnable ):
-            images = images.cuda( )
-         outputs = cnn( images )
-         final_pred = outputs.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
-         for i in range( len( images ) ):
-            if( success[ batchIndex ][ i ] == True ):
-               input = images[ i ].unsqueeze( 0 )
-               out1, out2, out3 = recon( { 'model' : cnn, 'input' : input } )
+            outputOrig = cnn( batch[ 'orig' ].cuda() )
+            outputAdvs = cnn( batch[ 'adv'  ].cuda() )
+         else:
+            outputOrig = cnn( batch[ 'orig' ] )
+            outputAdvs = cnn( batch[ 'adv'  ] )
+         
+         predOrig = outputOrig.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
+         predAdvs = outputAdvs.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
+         for i in range( len( batch[ 'status' ] ) ):
+            if( ( predOrig[ i ].item( ) == batch[ 'label' ][ i ] ) and ( batch[ 'status' ][ i ] == True ) ):
+               if( cnn.cudaEnable ):
+                  orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ).cuda( ) } )
+                  advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ).cuda( ) } )
+               else:
+                  orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ) } )
+                  advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ) } )
+               
+               folder = 'Images/Epsilon{}Batch{}Example{}/'.format( epsilon, batchIndex, i )
+               if( os.path.exists( folder ) ):
+                  for filename in os.listdir( folder ):
+                     filePath = os.path.join( folder, filename )
+                     try:
+                        if( os.path.isfile( filePath ) or os.path.islink( filePath ) ):
+                           os.unlink( filePath )
+                     except Exception as e:
+                        print( 'Failed to delete {} | Reasion: {}'.format( filePath, e ) )
+               else:
+                  os.mkdir( folder )
+               utils.save_image( orig1, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
+               utils.save_image( orig2, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
+               utils.save_image( orig3, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
+               utils.save_image( advs1, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
+               utils.save_image( advs2, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
+               utils.save_image( advs3, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
 
-               utils.save_image( out1, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 1 ) )
-               utils.save_image( out2, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 2 ) )
-               utils.save_image( out3, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 3 ) )
+               utils.save_image( batch[ 'orig' ][ i ], os.path.join( folder, '{}-{}-{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
+               utils.save_image( batch[ 'adv'  ][ i ], os.path.join( folder, '{}-{}-{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
 
-               example = images[ i ]
-               example = example.cpu()
-               utils.save_image( example, 'Images/Epsilon{}Batch{}Example{}-{}.png'.format( epsilon, batchIndex, i, success[ batchIndex ][ i ] ) )
-         break
+
+      #for batchIndex, ( images, labels ) in enumerate( advloader ):
+      #   if( cnn.cudaEnable ):
+      #      images = images.cuda( )
+      #   outputs = cnn( images )
+      #   final_pred = outputs.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
+      #   for i in range( len( images ) ):
+      #      if( success[ batchIndex ][ i ] == True ):
+      #         input = images[ i ].unsqueeze( 0 )
+      #         out1, out2, out3 = recon( { 'model' : cnn, 'input' : input } )
+      #
+      #         utils.save_image( out1, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 1 ) )
+      #         utils.save_image( out2, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 2 ) )
+      #         utils.save_image( out3, 'Images/Epsilon{}Batch{}Example{}_{}-{}CL{}.png'.format( epsilon, batchIndex, i, labelStr[ labels[ i ] ], labelStr[ final_pred[ i ].item( ) ], 3 ) )
+      #
+      #         example = images[ i ]
+      #         example = example.cpu()
+      #         utils.save_image( example, 'Images/Epsilon{}Batch{}Example{}-{}.png'.format( epsilon, batchIndex, i, success[ batchIndex ][ i ] ) )
+      #   break
 
 ##
 # @brief

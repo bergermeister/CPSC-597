@@ -127,7 +127,7 @@ class Adversary( object ):
             criterion = foolbox.criteria.Misclassification(yCurrentCuda)
          #Next line actually runs the attack 
          _, advs, success = attack(fmodel, xCurrentCuda, epsilons=epsilonMax, criterion=criterion)
-         result.append( success )
+         result.append( { 'status' : success, 'orig' : xCurrent, 'adv': advs, 'label' : yCurrent } )
          #Save the adversarial samples 
          for j in range(0, batchSize):
             xAdv[advSampleIndex] = advs[j]
