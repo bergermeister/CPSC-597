@@ -13,8 +13,8 @@
     <RootNamespace>AdversarialDetection</RootNamespace>
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.05 --epochs=50 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
+    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.05 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -40,6 +40,7 @@
     <Compile Include="Model\Encoder.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Model\Reconstruct.py" />
     <Compile Include="Utility\Data.py" />
     <Compile Include="Utility\DataManagerPytorch.py" />
     <Compile Include="Utility\ProgressBar.py">

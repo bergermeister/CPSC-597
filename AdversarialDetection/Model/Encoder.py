@@ -59,6 +59,12 @@ class Encoder( nn.Module ):
       out = self.act( out )
       return( out )
 
+   def Load( self, path ):
+      state = torch.load( path )
+      self.load_state_dict( state[ 'model' ] )
+      self.accuracy = state[ 'acc' ]
+      self.epochs   = state[ 'epoch' ]
+
    def Train( self, loader, epochs, batch_size ):
       self.train( True ) # Place the model into training mode
 

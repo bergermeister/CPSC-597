@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
+from torchvision import utils
 from time import time
 from Utility.ProgressBar import ProgressBar
 
@@ -22,41 +23,36 @@ class CNN( nn.Module ):
       self.cudaEnable = ( cudaEnable == 'True' )
       self.accuracy   = 0
       self.epochs     = 0
-      self.interm     = []
+      self.indices    = {}
 
       # Convolutional Layers
-      self.cl1 = nn.Conv2d( self.channels, 12, 4, 2, 1 ) # Convolutional Layer 1 (12, 16, 16)
-      self.bn1 = nn.BatchNorm2d( 12 )                    # Batch Normalization 1 
-      self.cl2 = nn.Conv2d( 12, 24, 4, 2, 1 )            # Convolutional Layer 2 (24,  8 , 8)
-      self.bn2 = nn.BatchNorm2d( 24 )                    # Batch Normalization 2
-      self.cl3 = nn.Conv2d( 24, 48, 4, 2, 1 )            # Convolutional Layer 3 (48,  4,  4)
-      self.bn3 = nn.BatchNorm2d( 48 )                    # Batch Normalization 3            
-      self.mp  = nn.MaxPool2d( 2, 2 )                    # Max Pool Layer (20 x 20) -> (10 x 10)
-
-      # Linear Layers
-      self.ll1 = nn.Linear( 48 * 2 * 2, 10 )
+      self.cl1 = nn.Conv2d( self.channels, 16, 5, 1, 1 ) # Convolutional Layer 1 (16, 16, 16)
+      self.cl2 = nn.Conv2d(            16, 32, 5, 1, 1 ) # Convolutional Layer 2 (32,  8 , 8)
+      self.cl3 = nn.Conv2d(            32, 64, 5, 1, 1 ) # Convolutional Layer 3 (64,  4,  4)
+      self.mp  = nn.MaxPool2d( 2, stride = 2, return_indices = True ) # Max Pooling
+      self.ll1 = nn.Linear( 64 * 2 * 2, 10 )
+      self.act = nn.Sigmoid( )
 
       # Define Loss Criteria
-      self.loss = nn.CrossEntropyLoss( )
+      self.lossFunc = nn.CrossEntropyLoss( )
 
       if( self.cudaEnable ):
          self.cuda( )
             
    def forward( self, x ):
-      out = self.cl1( x )   
-      out = self.bn1( out )
-      out = F.relu( out )
-      out = self.cl2( out )
-      out = self.bn2( out )
-      out = F.relu( out )
-      out = self.cl3( out )
-      out = self.bn3( out )
-      out = F.relu( out )
-      out = self.mp( out )
-      out = out.reshape( -1, 48 * 2 * 2 )
+      out, self.indices[ 'mp1' ] = self.mp( F.relu( self.cl1(   x ) ) )
+      out, self.indices[ 'mp2' ] = self.mp( F.relu( self.cl2( out ) ) )
+      out, self.indices[ 'mp3' ] = self.mp( F.relu( self.cl3( out ) ) )
+      out = out.reshape( -1, 64 * 2 * 2 )
       out = self.ll1( out )
-      out = torch.sigmoid( out )
+      out = self.act( out )
       return( out )
+
+   def Load( self, path ):
+      state = torch.load( path )
+      self.load_state_dict( state[ 'model' ] )
+      self.accuracy = state[ 'acc' ]
+      self.epochs   = state[ 'epoch' ]
 
    def Train( self, loader, epochs, batch_size ):
       self.train( True ) # Place the model into training mode
@@ -77,7 +73,7 @@ class CNN( nn.Module ):
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
             outputs = self( images )
-            loss = self.loss( outputs, labels )
+            loss = self.lossFunc( outputs, labels )
 
             # Backward Propagation
             optimizer.zero_grad( )  # Clear Gradients
@@ -108,7 +104,7 @@ class CNN( nn.Module ):
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
             outputs = self( images )
-            loss    = self.loss( outputs, labels )
+            loss    = self.lossFunc( outputs, labels )
 
             _, predicted = outputs.max( 1 )
             testLoss += loss.item( )            
