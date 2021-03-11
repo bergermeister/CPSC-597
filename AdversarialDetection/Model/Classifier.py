@@ -18,28 +18,42 @@ class Classifier( nn.Module ):
       super( ).__init__( )
 
       # Record cuda enabled flag
-      self.encoder    = encoder
       self.cudaEnable = ( cudaEnable == 'True' )
       self.accuracy   = 0
       self.epochs     = 0
+      self.activation = {}
 
       # Linear Layers
-      self.ll1 = nn.Linear( 48 * 4 * 4, 120 )
-      self.ll2 = nn.Linear( 120, 10 )
+      self.ll1 = nn.Linear( 16 * 15 * 15, 10 )
+      self.ll2 = nn.Linear( 32 *  6 *  6, 10 )
+      self.ll3 = nn.Linear( 64 *  2 *  2, 10 )
+      self.mp  = nn.MaxPool2d( 2, stride = 2 ) # Max Pooling
+      self.act = nn.Sigmoid( )
 
       # Define Loss Criteria
-      self.loss = nn.CrossEntropyLoss( )
+      self.lossFunc = nn.CrossEntropyLoss( )
 
       if( self.cudaEnable ):
          self.cuda( )
             
    def forward( self, x ):
-      encoded = self.encoder.Encode( x )
-      encoded = encoded.reshape( -1, 48 * 4 * 4 )
-      out = self.ll1( encoded )
-      out = self.ll2( out )
-      out = torch.sigmoid( out )
-      return( out )
+      cnn   = x[ 'model' ]
+      input = x[ 'input' ]
+
+      # Register Hooks
+      cnn.cl1.register_forward_hook( self.Hook( 'cl1' ) )
+      cnn.cl2.register_forward_hook( self.Hook( 'cl2' ) )
+      cnn.cl3.register_forward_hook( self.Hook( 'cl3' ) )
+
+      # Forward Pass through CNN
+      cnn( input )
+
+      # Classify each convolutional layer
+      out1 = self.act( self.ll1( self.mp( F.relu( self.activation[ 'cl1' ] ) ).reshape( -1, 16 * 15 * 15 ) ) )
+      out2 = self.act( self.ll2( self.mp( F.relu( self.activation[ 'cl2' ] ) ).reshape( -1, 32 *  6 *  6 ) ) )
+      out3 = self.act( self.ll3( self.mp( F.relu( self.activation[ 'cl3' ] ) ).reshape( -1, 64 *  2 *  2 ) ) )
+
+      return( out1, out2, out3 )
 
    def Load( self, path ):
       state = torch.load( path )
@@ -47,14 +61,13 @@ class Classifier( nn.Module ):
       self.accuracy = state[ 'acc' ]
       self.epochs   = state[ 'epoch' ]
 
-   def Train( self, loader, epochs, batch_size ):
-      self.train( True ) # Place the model into training mode
-      self.encoder.eval( )
+   def Train( self, cnn, loader, epochs, batch_size ):
+      self.train( True )   # Place the model into training mode
+      cnn.eval( )          # Place CNN into evaluation mode
 
+      optimizer = torch.optim.Adam( self.parameters( ), lr = 0.0002, weight_decay = 0.00001 )
       progress = ProgressBar( 40, 80 )
       beginTrain = time( )
-      optimizer = torch.optim.Adam( self.parameters( ), lr = 0.0002, weight_decay = 0.00001 )
-
       print( "Begin Training..." )
       for epoch in range( epochs ):
          beginEpoch = time( )
@@ -66,49 +79,62 @@ class Classifier( nn.Module ):
             # Forward pass
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
-            outputs = self( images )
-            loss = self.loss( outputs, labels )
-
+            out1, out2, out3 = self( { 'model' : cnn, 'input' : images } )
+            loss1 = self.lossFunc( out1, labels )
+            loss2 = self.lossFunc( out2, labels )
+            loss3 = self.lossFunc( out3, labels )
+            
             # Backward propagation
             optimizer.zero_grad( )  # Clear Gradients
-            loss.backward( )        # Calculate Gradients
+            loss1.backward( )       # Calculate Gradients
+            loss2.backward( )       # Calculate Gradients
+            loss3.backward( )       # Calculate Gradients
             optimizer.step( )       # Update Weights
-
+            
             # Logging
-            _, predicted = outputs.max( 1 )
-            trainLoss    += loss.item( )
-            total        += labels.size( 0 )
-            correct      += predicted.eq( labels ).sum( ).item( )
+            _, predicted1 = out1.max( 1 )
+            _, predicted2 = out2.max( 1 )
+            _, predicted3 = out3.max( 1 )
+            trainLoss    += loss1.item( ) + loss2.item( ) + loss3.item( )
+            total        += ( labels.size( 0 ) * 3 )
+            correct      += predicted1.eq( labels ).sum( ).item( ) + predicted2.eq( labels ).sum( ).item( ) + predicted3.eq( labels ).sum( ).item( )
             progress.Update( batchIndex, len( loader ), 'Epoch: %d | Loss: %.3f | Acc: %.3f%% (%d/%d)'
                              % ( self.epochs + epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
       print( 'End Training...' )
 
-   def Test( self, loader, batch_size ):
+   def Test( self, cnn, loader, batch_size ):
       self.eval( ) # Place the model into test/evaluation mode
-      self.encoder.eval( )
+      cnn.eval( )          # Place CNN into evaluation mode
       progress = ProgressBar( 40, 80 )
 
       testLoss = 0
       total    = 0
       correct  = 0
-
       print( 'Begin Evaluation...' )
       with torch.no_grad( ):
          for batchIndex, ( images, labels ) in enumerate( loader ):
+            # Forward pass
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
-            outputs = self( images )
-            loss = self.loss( outputs, labels )
+            out1, out2, out3 = self( { 'model' : cnn, 'input' : images } )
+            loss1 = self.lossFunc( out1, labels )
+            loss2 = self.lossFunc( out2, labels )
+            loss3 = self.lossFunc( out3, labels )
 
-            _, predicted = outputs.max( 1 )
-            testLoss += loss.item( )            
-            total    += labels.size( 0 )
-            correct  += predicted.eq( labels ).sum( ).item( )
-
+            # Logging
+            _, predicted1 = out1.max( 1 )
+            _, predicted2 = out2.max( 1 )
+            _, predicted3 = out3.max( 1 )
+            testLoss    += loss1.item( ) + loss2.item( ) + loss3.item( )
+            total        += ( labels.size( 0 ) * 3 )
+            correct      += predicted1.eq( labels ).sum( ).item( ) + predicted2.eq( labels ).sum( ).item( ) + predicted3.eq( labels ).sum( ).item( )
             progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
                              % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
       print( 'End Evaluation...' )
 
       return( 100. * correct / total )
    
-
+   def Hook( self, name ):
+      def hook( model, input, output ):
+         self.activation[ name ] = output.detach( )
+      return( hook )

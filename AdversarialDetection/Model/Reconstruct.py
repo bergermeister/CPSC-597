@@ -134,16 +134,14 @@ class Reconstruct( nn.Module ):
          for batchIndex, ( images, labels ) in enumerate( loader ):
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
-            outputs = self( images )
-            loss    = self.loss( outputs, labels )
+            out1, out2, out3 = self( { 'model' : cnn, 'input' : images } )
+            loss1 = self.lossFunc( out1, images )
+            loss2 = self.lossFunc( out2, images )
+            loss3 = self.lossFunc( out3, images )
+            total = total + loss1.item( ) + loss2.item( ) + loss3.item( )
 
-            _, predicted = outputs.max( 1 )
-            testLoss += loss.item( )            
-            total    += labels.size( 0 )
-            correct  += predicted.eq( labels ).sum( ).item( )
-
-            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+            # Logging
+            progress.Update( batchIndex, len( loader ), 'Epoch: {} | Loss: {}'.format( self.epochs + epoch, total ) )
       print( 'End Evaluation...' )
 
       return( 100. * correct / total )
