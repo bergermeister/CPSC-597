@@ -15,6 +15,7 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
     <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.062 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
+    <InterpreterId>CondaEnv|CondaEnv|PyTorchCuda10-2</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -46,6 +47,9 @@
     <Compile Include="Utility\ProgressBar.py">
       <SubType>Code</SubType>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|PyTorchCuda10-2" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
