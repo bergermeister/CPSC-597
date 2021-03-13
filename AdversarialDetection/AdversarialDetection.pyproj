@@ -14,7 +14,7 @@
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.05 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
+    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.062 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>

@@ -138,6 +138,9 @@ def Main( ):
                utils.save_image( advs1, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
                utils.save_image( advs2, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
                utils.save_image( advs3, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
+               utils.save_image( advs1 - orig1, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
+               utils.save_image( advs2 - orig2, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
+               utils.save_image( advs3 - orig3, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
 
                utils.save_image( batch[ 'orig' ][ i ], os.path.join( folder, '{}-{}-{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
                utils.save_image( batch[ 'adv'  ][ i ], os.path.join( folder, '{}-{}-{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
