@@ -13,6 +13,7 @@ from Model.Encoder import Encoder
 from Model.Classifier import Classifier
 from Model.Adversary import Adversary
 from Utility.Data import Data
+from Utility.ProgressBar import ProgressBar
 
 activation = {}
 
@@ -52,13 +53,13 @@ def Main( ):
       print( "Loading CNN state" )
       cnn.Load( args.cnn )
    if( os.path.exists( args.recon ) ):
-      print( "Loading CNN state" )
+      print( "Loading Reconstructor state" )
       recon.Load( args.recon )
    if( os.path.exists( args.encoder ) ):
       print( "Loading encoder state" )
       encoder.Load( args.encoder )
    if( os.path.exists( args.classifier ) ):
-      print( "Loading classifier state" )
+      print( "Loading Classifier state" )
       classifier.Load( args.classifier )
 
    if( args.mode == 'train' ):
@@ -90,66 +91,86 @@ def Main( ):
       epsilon = args.epsilon
       adversary = Adversary( cnn )
       
+      successLoader = adversary.CreateSuccessLoader( 'cuda', data.test_loader )
+      accuracies.append( cnn.Test( successLoader, args.batch_size ) )
       print( "Generating Adversarial Images" )
-      advloader, results = adversary.PGDAttack( "cuda", data.test_loader, epsilon, epsilon / 10.0, 10, -1, 1, False )
-      print( "Evaluating Normal Images" )
-      accuracies.append( cnn.Test( data.test_loader, args.batch_size ) )
+      advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
       print( "Evaluating Adversarial Images" )
       accuracies.append( cnn.Test( advloader, args.batch_size ) )
-
+      print( "Saving Adversarial Image Examples" )
+      #            0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+      examples = [ ]
+      for i in range( len( labelStr ) ):
+         examples.append( { 'total' : 0, 'cl1' : 0, 'cl2' : 0, 'cl3' : 0 } )
+      
+      progress = ProgressBar( 40, 80 )
       for batchIndex in range( len( results ) ):
-         batch = results[ batchIndex ]
-         if( cnn.cudaEnable ):
-            outputOrig = cnn( batch[ 'orig' ].cuda() )
-            outputAdvs = cnn( batch[ 'adv'  ].cuda() )
-         else:
-            outputOrig = cnn( batch[ 'orig' ] )
-            outputAdvs = cnn( batch[ 'adv'  ] )
+         labelBatch     = results[ batchIndex ][ 'label' ]         
+         originalBatch  = results[ batchIndex ][ 'orig' ]
+         originalOut    = cnn( originalBatch.cuda( ) )
+         originalPred   = originalOut.max( 1, keepdim = True )[ 1 ]
+         adversaryBatch = results[ batchIndex ][ 'adv' ]
+         adversaryOut   = cnn( adversaryBatch.cuda( ) )
+         adversaryPred  = adversaryOut.max( 1, keepdim = True )[ 1 ]
          
-         predOrig = outputOrig.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
-         predAdvs = outputAdvs.max( 1, keepdim = True )[ 1 ] # get the index of the max log-probability
-         for i in range( len( batch[ 'status' ] ) ):
-            if( ( predOrig[ i ].item( ) == batch[ 'label' ][ i ] ) and ( batch[ 'status' ][ i ] == True ) ):
-               if( cnn.cudaEnable ):
-                  orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ).cuda( ) } )
-                  advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ).cuda( ) } )
-                  corig1, corig2, corig3 = classifier( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ).cuda( ) } )
-                  cadvs1, cadvs2, cadvs3 = classifier( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ).cuda( ) } )
-               else:
-                  orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ) } )
-                  advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ) } )
-                  corig1, corig2, corig3 = classifier( { 'model' : cnn, 'input' : batch[ 'orig' ][ i ].unsqueeze( 0 ) } )
-                  cadvs1, cadvs2, cadvs3 = classifier( { 'model' : cnn, 'input' : batch[ 'adv'  ][ i ].unsqueeze( 0 ) } )
+         for i in range( len( adversaryOut ) ):
+            # If the Adversary prediction does not equal the correct label and the example count for the label is less than 100 
+            if( ( adversaryPred[ i ] != labelBatch[ i ] ) and ( examples[ labelBatch[ i ] ][ 'total' ] < 100 ) ):
+               examples[ labelBatch[ i ] ][ 'total' ] += 1
+      
+               # Obtain the reconstructed image for the original and adversarial inputs after convolutional layers 1, 2, and 3
+               orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : originalBatch[ i ].unsqueeze( 0 ).cuda( ) } )
+               advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : adversaryBatch[ i ].unsqueeze( 0 ).cuda( ) } )
+      
+               # Obtain the classification for the original and adversarial inputs after convolutional layers 1, 2, and 3
+               corig1, corig2, corig3 = classifier( { 'model' : cnn, 'input' : originalBatch[ i ].unsqueeze( 0 ).cuda( ) } )
+               cadvs1, cadvs2, cadvs3 = classifier( { 'model' : cnn, 'input' : adversaryBatch[ i ].unsqueeze( 0 ).cuda( ) } )
+      
+               if( cadvs1.max( 1, keepdim = True )[ 1 ] != corig1.max( 1, keepdim = True )[ 1 ] ):
+                  examples[ labelBatch[ i ] ][ 'cl1' ] += 1
+               elif( cadvs2.max( 1, keepdim = True )[ 1 ] != corig2.max( 1, keepdim = True )[ 1 ] ):
+                  examples[ labelBatch[ i ] ][ 'cl2' ] += 1
+               elif( cadvs3.max( 1, keepdim = True )[ 1 ] != corig3.max( 1, keepdim = True )[ 1 ] ):
+                  examples[ labelBatch[ i ] ][ 'cl3' ] += 1
 
-               folder = 'Images/Epsilon{}Batch{}Example{}/'.format( epsilon, batchIndex, i )
-               if( os.path.exists( folder ) ):
-                  for filename in os.listdir( folder ):
-                     filePath = os.path.join( folder, filename )
-                     try:
-                        if( os.path.isfile( filePath ) or os.path.islink( filePath ) ):
-                           os.unlink( filePath )
-                     except Exception as e:
-                        print( 'Failed to delete {} | Reasion: {}'.format( filePath, e ) )
-               else:
+               # Ensure folder exists to store example images
+               folder = 'Images/Epsilon{}/'.format( epsilon )
+               if( not os.path.exists( folder ) ):
                   os.mkdir( folder )
-               utils.save_image( orig1, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
-               utils.save_image( orig2, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
-               utils.save_image( orig3, os.path.join( folder, '{}-{}-{}_CL{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
-               utils.save_image( advs1, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
-               utils.save_image( advs2, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
-               utils.save_image( advs3, os.path.join( folder, '{}-{}-{}_CL{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
-               utils.save_image( advs1 - orig1, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 1 ) ) )
-               utils.save_image( advs2 - orig2, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 2 ) ) )
-               utils.save_image( advs3 - orig3, os.path.join( folder, '{}-{}-{}_CL{}D.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ], 3 ) ) )
+               folder = os.path.join( folder, labelStr[ labelBatch[ i ] ] )
+               if( not os.path.exists( folder ) ):
+                  os.mkdir( folder )
+      
+               # Save the original, adversarial, reconstructed, and delta images
+               utils.save_image( originalBatch[ i ],  os.path.join( folder,        'Example{}-O.png'.format( examples[ labelBatch[ i ] ][ 'total' ] ) ) )
+               utils.save_image( adversaryBatch[ i ], os.path.join( folder,        'Example{}-A.png'.format( examples[ labelBatch[ i ] ][ 'total' ] ) ) )
+               utils.save_image( orig1,               os.path.join( folder, 'Example{}-O-CL1-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ corig1.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( orig2,               os.path.join( folder, 'Example{}-O-CL2-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ corig2.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( orig3,               os.path.join( folder, 'Example{}-O-CL3-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ corig3.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( advs1,               os.path.join( folder, 'Example{}-A-CL1-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ cadvs1.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( advs2,               os.path.join( folder, 'Example{}-A-CL2-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ cadvs2.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( advs3,               os.path.join( folder, 'Example{}-A-CL3-{}.png'.format( examples[ labelBatch[ i ] ][ 'total' ], labelStr[ cadvs3.max( 1 )[ 1 ] ] ) ) )
+               utils.save_image( advs1 - orig1,       os.path.join( folder,    'Example{}-D-CL1.png'.format( examples[ labelBatch[ i ] ][ 'total' ] ) ) )
+               utils.save_image( advs2 - orig2,       os.path.join( folder,    'Example{}-D-CL2.png'.format( examples[ labelBatch[ i ] ][ 'total' ] ) ) )
+               utils.save_image( advs3 - orig3,       os.path.join( folder,    'Example{}-D-CL3.png'.format( examples[ labelBatch[ i ] ][ 'total' ] ) ) )
+               
+               filename = os.path.join( folder, 'classification.csv' )
+               if( not os.path.exists( filename ) ):
+                  with open( filename, 'w', newline='' ) as csvfile:
+                     csvWriter = csv.writer( csvfile, delimiter = ',', quotechar = '|', quoting = csv.QUOTE_MINIMAL )
+                     csvWriter.writerow( [ 'OL1', 'OL2', 'OL3', 'AL1', 'AL2', 'AL3' ] )
 
-               utils.save_image( batch[ 'orig' ][ i ], os.path.join( folder, '{}-{}-{}A.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
-               utils.save_image( batch[ 'adv'  ][ i ], os.path.join( folder, '{}-{}-{}O.png'.format( labelStr[ batch[ 'label' ][ i ] ], labelStr[ predOrig[ i ].item( ) ], labelStr[ predAdvs[ i ].item( ) ] ) ) )
-
-               with open( os.path.join( folder, 'classification.csv' ), 'w', newline='' ) as csvfile:
+               with open( filename, 'a+', newline='' ) as csvfile:
                   csvWriter = csv.writer( csvfile, delimiter = ',', quotechar = '|', quoting = csv.QUOTE_MINIMAL )
-                  csvWriter.writerow( ['', 'L1', 'L2', 'L3'] )
-                  csvWriter.writerow( ['Original', labelStr[ corig1.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig2.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig2.max( 1, keepdim = True )[ 1 ] ] ] )
-                  csvWriter.writerow( ['Adversary', labelStr[ cadvs1.max( 1, keepdim = True )[ 1 ] ], labelStr[ cadvs2.max( 1, keepdim = True )[ 1 ] ], labelStr[ cadvs2.max( 1, keepdim = True )[ 1 ] ] ] )
+                  csvWriter.writerow( [ labelStr[ corig1.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig2.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig3.max( 1, keepdim = True )[ 1 ] ], 
+                                        labelStr[ cadvs1.max( 1, keepdim = True )[ 1 ] ], labelStr[ cadvs2.max( 1, keepdim = True )[ 1 ] ], labelStr[ cadvs3.max( 1, keepdim = True )[ 1 ] ] ] )
+         # Update Progress
+         progress.Update( batchIndex, len( results ), '' )
+      with open( "Images/Epsilon{}/Statistics.csv".format( epsilon ), 'w', newline='' ) as csvfile:
+         csvWriter = csv.writer( csvfile, delimiter = ',', quotechar = '|', quoting = csv.QUOTE_MINIMAL )
+         csvWriter.writerow( [ 'label', 'Total Examples', 'CL1 Mismatch', 'CL2 Mismatch', 'CL3 Mismatch' ] )
+         for i in range( len( examples ) ):
+            csvWriter.writerow( [ labelStr[ i ], examples[ i ][ 'total' ], examples[ i ][ 'cl1' ], examples[ i ][ 'cl2' ], examples[ i ][ 'cl3' ] ] )
 
 ##
 # @brief

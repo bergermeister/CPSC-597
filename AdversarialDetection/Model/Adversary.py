@@ -2,6 +2,7 @@ import torch
 import foolbox
 import Utility.DataManagerPytorch as DMP
 from torch.nn import functional as F
+from Utility.ProgressBar import ProgressBar
 
 class Adversary( object ):
    def __init__( self, model ):
@@ -137,6 +138,46 @@ class Adversary( object ):
       advLoader = DMP.TensorToDataLoader(xAdv, yClean, transforms= None, batchSize= dataLoader.batch_size, randomizer=None) #use the same batch size as the original loader
       return advLoader, result
 
+   def CreateSuccessLoader( self, device, dataLoader ):
+      self.model.eval( ) #change Model to evaluation mode
+      successData = []
+
+      progress = ProgressBar( 40, 80 )
+      testLoss = 0
+      total    = 0
+      correct  = 0
+      print( 'Begin Evaluation...' )
+      with torch.no_grad( ):
+         for batchIndex, ( images, labels ) in enumerate( dataLoader ):
+            # Forward Pass
+            images = images.to( device )
+            labels = labels.to( device )
+            outputs = self.model( images )
+            _, predicted = outputs.max( 1 )
+            total    += labels.size( 0 )
+            correct  += predicted.eq( labels ).sum( ).item( )
+
+            # Capture successful data
+            for i in range( 0, images.shape[ 0 ] ):
+               if( predicted[ i ].eq( labels[ i ] ) ):
+                  successData.append( { 'image': images[ i ], 'label': labels[ i ] } )
+
+            # Update Progress
+            progress.Update( batchIndex, len( dataLoader ), ' Acc: %.3f%% (%d/%d)'
+                             % ( 100. * correct / total, correct, total ) )
+
+      print( 'End Evaluation...' )
+      print( 'Creating Success Loader...' )
+      xShape   = DMP.GetOutputShape( dataLoader )
+      xSuccess = torch.zeros( len( successData ), xShape[ 0 ], xShape[ 1 ], xShape[ 2 ] )
+      ySuccess = torch.zeros( len( successData ), dtype = torch.long )
+      for i in range( len( successData ) ):
+         xSuccess[ i ] = successData[ i ][ 'image' ]
+         ySuccess[ i ] = successData[ i ][ 'label' ]
+      successLoader = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = None ) #use the same batch size as the original loader
+      print( 'Success Loader Created...' )
+      return( successLoader )
+      
 
    #def Plot( self ):
       ######################################################################
