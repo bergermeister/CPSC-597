@@ -8,42 +8,60 @@
    <tr>  <td> Trainig 
          <td> 
             <pre>
-python AdversarialDetection.py --dataset=mnist 
-                               --data_path=E:\Projects\Dataset\mnist\processed 
-                               --batch_size=64 
-                               --mode=train 
-                               --epochs=2 
-                               --cuda=True 
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
-                               
-python AdversarialDetection.py --dataset=cifar10 
-                               --data_path=E:\Projects\Dataset\cifar10
-                               --batch_size=64 
-                               --mode=train 
-                               --epochs=150
-                               --cuda=True 
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10.model
+python AdversarialDetection.py                                               
+   --dataset=cifar10                                                         
+   --data_path=E:\Projects\Dataset\cifar10                                   
+   --batch_size=64                                                           
+   --mode=train                                                              
+   --epochs=100                                                              
+   --cuda=True                                                               
+   --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model              
+
+python AdversarialDetection.py                                               
+   --dataset=cifar10                                                         
+   --data_path=E:\Projects\Dataset\cifar10                                   
+   --batch_size=64                                                           
+   --mode=recon                                                              
+   --epochs=50                                                               
+   --cuda=True                                                               
+   --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model    
+   --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model
+
+python AdversarialDetection.py                                               
+   --dataset=cifar10                                                         
+   --data_path=E:\Projects\Dataset\cifar10                                   
+   --batch_size=64                                                           
+   --mode=classifier                                                         
+   --epochs=1                                                                
+   --cuda=True                                                               
+   --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model    
+   --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model
             </pre>
    <tr>  <td> Evaluation
          <td>
             <pre>
-python AdversarialDetection.py --dataset=mnist 
-                               --data_path=E:\Projects\Dataset\mnist\processed 
-                               --batch_size=64 
-                               --mode=test 
-                               --cuda=True 
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+python AdversarialDetection.py                                                
+   --dataset=cifar10                                                          
+   --data_path=E:\Projects\Dataset\cifar10                                    
+   --batch_size=64                                                            
+   --mode=test                                                                
+   --cuda=True                                                                
+   --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model     
+   --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model
             </pre>
    <tr>  <td> Adversarial
          <td>
             <pre>
-python AdversarialDetection.py --dataset=mnist 
-                               --data_path=E:\Projects\Dataset\mnist\processed 
-                               --batch_size=1
-                               --mode=adversary 
-                               --epsilon=0.1
-                               --cuda=True 
-                               --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cnn.model
+python AdversarialDetection.py                                               
+   --dataset=cifar10                                                         
+   --data_path=E:\Projects\Dataset\cifar10                                   
+   --batch_size=64                                                           
+   --mode=adversary                                                          
+   --epsilon=%1                                                              
+   --cuda=True                                                               
+   --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model    
+   --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model
+   --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model
             </pre>
 </table>
  */
