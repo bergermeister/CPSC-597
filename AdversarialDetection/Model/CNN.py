@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 from torchvision import utils
+from torchvision import transforms
 from time import time
 from Utility.ProgressBar import ProgressBar
 
@@ -31,7 +32,7 @@ class CNN( nn.Module ):
       self.cl3 = nn.Conv2d(            32, 64, 5, 1, 1 ) # Convolutional Layer 3 (64,  4,  4)
       self.mp  = nn.MaxPool2d( 2, stride = 2, return_indices = True ) # Max Pooling
       self.ll1 = nn.Linear( 64 * 2 * 2, 10 )
-      self.act = nn.Sigmoid( )
+      self.act = nn.Softmax( dim = 1 )
 
       # Define Loss Criteria
       self.lossFunc = nn.CrossEntropyLoss( )
@@ -117,3 +118,65 @@ class CNN( nn.Module ):
 
       return( 100. * correct / total )
    
+   def TestGaussian( self, loader, batch_size ):
+      self.eval( ) # Place the model into test/evaluation mode
+      progress = ProgressBar( 40, 80 )
+
+      #gaussian = transforms.GaussianBlur( 5, sigma=( 0.1, 2.0 ) )
+      gaussian = transforms.GaussianBlur( 5, sigma=( 2.0 ) )
+
+      testLoss = 0
+      total    = 0
+      correct  = 0
+
+      print( 'Begin Evaluation...' )
+      with torch.no_grad( ):
+         for batchIndex, ( images, labels ) in enumerate( loader ):
+            if( self.cudaEnable ):
+               images, labels = images.cuda( ), labels.cuda( )
+            blurred = gaussian( images )
+            outputs = self( blurred )
+            loss    = self.lossFunc( outputs, labels )
+
+            _, predicted = outputs.max( 1 )
+            testLoss += loss.item( )            
+            total    += labels.size( 0 )
+            correct  += predicted.eq( labels ).sum( ).item( )
+
+            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+      print( 'End Evaluation...' )
+
+      return( 100. * correct / total )
+
+   def TestGaussianHighpass( self, loader, batch_size ):
+      self.eval( ) # Place the model into test/evaluation mode
+      progress = ProgressBar( 40, 80 )
+
+      #gaussian = transforms.GaussianBlur( 5, sigma=( 0.1, 2.0 ) )
+      gaussian = transforms.GaussianBlur( 5, sigma=( 2.0 ) )
+      
+      testLoss = 0
+      total    = 0
+      correct  = 0
+
+      print( 'Begin Evaluation...' )
+      with torch.no_grad( ):
+         for batchIndex, ( images, labels ) in enumerate( loader ):
+            if( self.cudaEnable ):
+               images, labels = images.cuda( ), labels.cuda( )
+            blurred = gaussian( images )
+            highpass = images - blurred
+            outputs = self( highpass )
+            loss    = self.lossFunc( outputs, labels )
+
+            _, predicted = outputs.max( 1 )
+            testLoss += loss.item( )            
+            total    += labels.size( 0 )
+            correct  += predicted.eq( labels ).sum( ).item( )
+
+            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+      print( 'End Evaluation...' )
+
+      return( 100. * correct / total )

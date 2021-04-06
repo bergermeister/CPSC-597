@@ -28,7 +28,7 @@ class Classifier( nn.Module ):
       self.ll2 = nn.Linear( 32 *  6 *  6, 10 )
       self.ll3 = nn.Linear( 64 *  2 *  2, 10 )
       self.mp  = nn.MaxPool2d( 2, stride = 2 ) # Max Pooling
-      self.act = nn.Sigmoid( )
+      self.act = nn.Softmax( dim = 1 )
 
       # Define Loss Criteria
       self.lossFunc = nn.CrossEntropyLoss( )

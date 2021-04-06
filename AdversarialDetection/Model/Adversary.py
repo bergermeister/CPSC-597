@@ -177,7 +177,28 @@ class Adversary( object ):
       successLoader = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = None ) #use the same batch size as the original loader
       print( 'Success Loader Created...' )
       return( successLoader )
-      
+   
+   def CreateCombinedLoader( self, dataLoader, advLoader ):
+      print( 'Creating Combined Loader...' )
+      combinedData = []
+
+      for batchIndex, ( images, labels ) in enumerate( dataLoader ):
+         for i in range( 0, images.shape[ 0 ] ):
+            combinedData.append( { 'image': images[ i ], 'label': labels[ i ] } )
+
+      for batchIndex, ( images, labels ) in enumerate( advLoader ):
+         for i in range( 0, images.shape[ 0 ] ):
+            combinedData.append( { 'image': images[ i ], 'label': labels[ i ] } )
+
+      xShape   = DMP.GetOutputShape( dataLoader )
+      xSuccess = torch.zeros( len( combinedData ), xShape[ 0 ], xShape[ 1 ], xShape[ 2 ] )
+      ySuccess = torch.zeros( len( combinedData ), dtype = torch.long )
+      for i in range( len( combinedData ) ):
+         xSuccess[ i ] = combinedData[ i ][ 'image' ]
+         ySuccess[ i ] = combinedData[ i ][ 'label' ]
+      combinedData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = None ) #use the same batch size as the original loader
+      print( 'Combined Loader Created...' )
+      return( combinedData )
 
    #def Plot( self ):
       ######################################################################

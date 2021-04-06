@@ -30,11 +30,12 @@ def Main( ):
    parser.add_argument( '--dataset',    type = str, default = 'mnist',           choices = [ 'mnist', 'cifar10' ] )
    parser.add_argument( '--data_path',  type = str, required = True,             help = 'path to dataset' )
    parser.add_argument( '--batch_size', type = int, default = 64,                help = 'Size of a batch' )
-   parser.add_argument( '--mode',       type = str, default = 'train',           choices = [ 'encoder', 'classifier', 'train', 'test', 'recon', 'adversary' ] )
+   parser.add_argument( '--mode',       type = str, default = 'train',           choices = [ 'encoder', 'classifier', 'train', 'atrain', 'test', 'recon', 'adversary' ] )
    parser.add_argument( '--epochs',     type = int, default = 50,                help = 'The number of epochs to run')
    parser.add_argument( '--epsilon',    type = float, default = 0.1,             help = 'Perturbed image pixel adjustment factor' )
    parser.add_argument( '--cuda',       type = str, default = 'True',            help = 'Availability of cuda' )
    parser.add_argument( '--cnn',        type = str, default = 'cnn.state',       help = 'Path to CNN Model State' )
+   parser.add_argument( '--acnn',       type = str, default = 'acnn.state',      help = 'Path to ACNN Model State' )
    parser.add_argument( '--recon',      type = str, default = 'recon.state',     help = 'Path to Reconstruction Model State' )
    parser.add_argument( '--encoder',    type = str, default = 'encoder.state',   help = 'Path to Encoder Model State' )
    parser.add_argument( '--classifier', type = str, default = 'clasifier.state', help = 'Path to Classifier Model State' )
@@ -45,6 +46,7 @@ def Main( ):
 
    print( "Creating Models" )
    cnn        = CNN( data.channels, args.cuda )
+   acnn       = CNN( data.channels, args.cuda )
    recon      = Reconstruct( data.channels, args.cuda )
    encoder    = Encoder( data.channels, args.cuda )
    classifier = Classifier( encoder, args.cuda )
@@ -52,6 +54,9 @@ def Main( ):
    if( os.path.exists( args.cnn ) ):
       print( "Loading CNN state" )
       cnn.Load( args.cnn )
+   if( os.path.exists( args.acnn ) ):
+      print( "Loading ACNN state" )
+      acnn.Load( args.acnn )
    if( os.path.exists( args.recon ) ):
       print( "Loading Reconstructor state" )
       recon.Load( args.recon )
@@ -82,6 +87,16 @@ def Main( ):
       acc = classifier.Test( cnn, data.test_loader, args.batch_size )
       if( acc > classifier.accuracy ):
          Save( classifier, acc, classifier.epochs + args.epochs, args.classifier )
+   elif( args.mode == 'atrain' ):
+      epsilon = args.epsilon
+      adversary = Adversary( cnn )
+      successLoader = adversary.CreateSuccessLoader( 'cuda', data.train_loader )
+      advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
+      combinedLoader = adversary.CreateCombinedLoader( data.train_loader, advloader )
+      acnn.Train( combinedLoader, args.epochs, args.batch_size )
+      acc = acnn.Test( data.test_loader, args.batch_size )
+      if( acc > acnn.accuracy ):
+         Save( acnn, 0, acnn.epochs + args.epochs, args.acnn )
    elif( args.mode == 'adversary' ):
       labelStr = [ 'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck' ]
       cnn.eval( )
@@ -97,6 +112,11 @@ def Main( ):
       advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
       print( "Evaluating Adversarial Images" )
       accuracies.append( cnn.Test( advloader, args.batch_size ) )
+      #print( "Evaluating Blurred Adversarial Images" )
+      #accuracies.append( cnn.TestGaussian( advloader, args.batch_size ) )
+      #print( "Evaluating Guassian Highpass Adversarial Images" )
+      #accuracies.append( cnn.TestGaussianHighpass( advloader, args.batch_size ) )
+
       print( "Saving Adversarial Image Examples" )
       #            0, 1, 2, 3, 4, 5, 6, 7, 8, 9
       examples = [ ]
@@ -132,7 +152,7 @@ def Main( ):
                   examples[ labelBatch[ i ] ][ 'cl2' ] += 1
                elif( cadvs3.max( 1, keepdim = True )[ 1 ] != corig3.max( 1, keepdim = True )[ 1 ] ):
                   examples[ labelBatch[ i ] ][ 'cl3' ] += 1
-
+      
                # Ensure folder exists to store example images
                folder = 'Images/Epsilon{}/'.format( epsilon )
                if( not os.path.exists( folder ) ):
@@ -159,7 +179,7 @@ def Main( ):
                   with open( filename, 'w', newline='' ) as csvfile:
                      csvWriter = csv.writer( csvfile, delimiter = ',', quotechar = '|', quoting = csv.QUOTE_MINIMAL )
                      csvWriter.writerow( [ 'OL1', 'OL2', 'OL3', 'AL1', 'AL2', 'AL3' ] )
-
+      
                with open( filename, 'a+', newline='' ) as csvfile:
                   csvWriter = csv.writer( csvfile, delimiter = ',', quotechar = '|', quoting = csv.QUOTE_MINIMAL )
                   csvWriter.writerow( [ labelStr[ corig1.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig2.max( 1, keepdim = True )[ 1 ] ], labelStr[ corig3.max( 1, keepdim = True )[ 1 ] ], 

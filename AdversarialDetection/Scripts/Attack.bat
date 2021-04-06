@@ -6,4 +6,5 @@ python AdversarialDetection.py                                                ^
    --epsilon=%1                                                               ^
    --cuda=True                                                                ^
    --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model     ^
-   --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model
+   --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model ^
+   --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model

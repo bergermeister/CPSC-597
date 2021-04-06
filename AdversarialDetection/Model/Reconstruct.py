@@ -114,11 +114,14 @@ class Reconstruct( nn.Module ):
             # Logging
             progress.Update( batchIndex, len( loader ), 'Epoch: {} | Loss: {}'.format( self.epochs + epoch, total ) )
 
+         folder = 'Images/Reconstruct/'
+         if( not os.path.exists( folder ) ):
+            os.mkdir( folder )
          for i in range( len( images ) ):
-            utils.save_image( images[ i ], 'Images/Epoch{}-{}I.png'.format( epoch, i ) )
-            utils.save_image( out1[ i ], 'Images/Epoch{}-{}D1.png'.format( epoch, i ) )
-            utils.save_image( out2[ i ], 'Images/Epoch{}-{}D2.png'.format( epoch, i ) )
-            utils.save_image( out3[ i ], 'Images/Epoch{}-{}D3.png'.format( epoch, i ) )
+            utils.save_image( images[ i ], 'Images/Reconstruct/Epoch{}-{}I.png'.format( epoch, i ) )
+            utils.save_image( out1[ i ],   'Images/Reconstruct/Epoch{}-{}D1.png'.format( epoch, i ) )
+            utils.save_image( out2[ i ],   'Images/Reconstruct/Epoch{}-{}D2.png'.format( epoch, i ) )
+            utils.save_image( out3[ i ],   'Images/Reconstruct/Epoch{}-{}D3.png'.format( epoch, i ) )
       print( 'End Training...' )
 
    def Test( self, loader, batch_size ):
