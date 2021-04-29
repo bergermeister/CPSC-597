@@ -1,5 +1,6 @@
 ## @package AdversarialDetection
 # 
+from Model.MetaClassifier import MetaClassifier
 import sys
 import os
 import argparse
@@ -12,6 +13,7 @@ from Model.Reconstruct import Reconstruct
 from Model.Encoder import Encoder
 from Model.Classifier import Classifier
 from Model.Adversary import Adversary
+
 from Utility.Data import Data
 from Utility.ProgressBar import ProgressBar
 
@@ -30,15 +32,16 @@ def Main( ):
    parser.add_argument( '--dataset',    type = str, default = 'mnist',           choices = [ 'mnist', 'cifar10' ] )
    parser.add_argument( '--data_path',  type = str, required = True,             help = 'path to dataset' )
    parser.add_argument( '--batch_size', type = int, default = 64,                help = 'Size of a batch' )
-   parser.add_argument( '--mode',       type = str, default = 'train',           choices = [ 'encoder', 'classifier', 'train', 'atrain', 'test', 'recon', 'adversary' ] )
+   parser.add_argument( '--mode',       type = str, default = 'train',           choices = [ 'encoder', 'classifier', 'train', 'atrain', 'metatrain', 'test', 'recon', 'adversary' ] )
    parser.add_argument( '--epochs',     type = int, default = 50,                help = 'The number of epochs to run')
    parser.add_argument( '--epsilon',    type = float, default = 0.1,             help = 'Perturbed image pixel adjustment factor' )
    parser.add_argument( '--cuda',       type = str, default = 'True',            help = 'Availability of cuda' )
    parser.add_argument( '--cnn',        type = str, default = 'cnn.state',       help = 'Path to CNN Model State' )
-   parser.add_argument( '--acnn',       type = str, default = 'acnn.state',      help = 'Path to ACNN Model State' )
+   parser.add_argument( '--ann',        type = str, default = 'ann.state',       help = 'Path to ACNN Model State' )
    parser.add_argument( '--recon',      type = str, default = 'recon.state',     help = 'Path to Reconstruction Model State' )
    parser.add_argument( '--encoder',    type = str, default = 'encoder.state',   help = 'Path to Encoder Model State' )
    parser.add_argument( '--classifier', type = str, default = 'clasifier.state', help = 'Path to Classifier Model State' )
+   parser.add_argument( '--metann',     type = str, default = 'metann.state',    help = 'Path to Meta Classifier Model State' )
    args = parser.parse_args( )
 
    print( "Creating Dataloader" )
@@ -49,12 +52,13 @@ def Main( ):
    acnn       = CNN( data.channels, args.cuda )
    recon      = Reconstruct( data.channels, args.cuda )
    encoder    = Encoder( data.channels, args.cuda )
-   classifier = Classifier( encoder, args.cuda )
+   classifier = Classifier( args.cuda )
+   meta       = MetaClassifier( args.cuda )
 
    if( os.path.exists( args.cnn ) ):
       print( "Loading CNN state" )
       cnn.Load( args.cnn )
-   if( os.path.exists( args.acnn ) ):
+   if( os.path.exists( args.ann ) ):
       print( "Loading ACNN state" )
       acnn.Load( args.acnn )
    if( os.path.exists( args.recon ) ):
@@ -66,12 +70,30 @@ def Main( ):
    if( os.path.exists( args.classifier ) ):
       print( "Loading Classifier state" )
       classifier.Load( args.classifier )
+   if( os.path.exists( args.metann ) ):
+      print( "Loading Meta Classifier state" )
+      meta.Load( args.metann )
+
+   adversary  = Adversary( cnn )
 
    if( args.mode == 'train' ):
       cnn.Train( data.train_loader, args.epochs, args.batch_size )
       acc = cnn.Test( data.test_loader, args.batch_size )
       if( acc > cnn.accuracy ):
          Save( cnn, 0, cnn.epochs + args.epochs, args.cnn )
+   if( args.mode == 'metatrain' ):
+      epsilon = args.epsilon
+      successLoader = adversary.CreateSuccessLoader( 'cuda', data.train_loader )
+      advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
+      metaloader = adversary.CreateMetaLoader( cnn, classifier, successLoader, advloader )
+      meta.Train( metaloader, args.epochs, args.batch_size )
+
+      successLoader = adversary.CreateSuccessLoader( 'cuda', data.test_loader )
+      advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
+      metaloader = adversary.CreateMetaLoader( cnn, classifier, successLoader, advloader )
+      acc = meta.Test( metaloader, args.batch_size )
+      if( acc > meta.accuracy ):
+         Save( meta, 0, meta.epochs + args.epochs, args.metann )
    elif( args.mode == 'test' ):
       cnn.eval()
       acc = cnn.Test( data.test_loader, args.batch_size )
@@ -89,7 +111,6 @@ def Main( ):
          Save( classifier, acc, classifier.epochs + args.epochs, args.classifier )
    elif( args.mode == 'atrain' ):
       epsilon = args.epsilon
-      adversary = Adversary( cnn )
       successLoader = adversary.CreateSuccessLoader( 'cuda', data.train_loader )
       advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
       combinedLoader = adversary.CreateCombinedLoader( data.train_loader, advloader )
@@ -141,7 +162,7 @@ def Main( ):
                # Obtain the reconstructed image for the original and adversarial inputs after convolutional layers 1, 2, and 3
                orig1, orig2, orig3 = recon( { 'model' : cnn, 'input' : originalBatch[ i ].unsqueeze( 0 ).cuda( ) } )
                advs1, advs2, advs3 = recon( { 'model' : cnn, 'input' : adversaryBatch[ i ].unsqueeze( 0 ).cuda( ) } )
-      
+
                # Obtain the classification for the original and adversarial inputs after convolutional layers 1, 2, and 3
                corig1, corig2, corig3 = classifier( { 'model' : cnn, 'input' : originalBatch[ i ].unsqueeze( 0 ).cuda( ) } )
                cadvs1, cadvs2, cadvs3 = classifier( { 'model' : cnn, 'input' : adversaryBatch[ i ].unsqueeze( 0 ).cuda( ) } )

@@ -14,7 +14,7 @@
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10\ --batch_size=64 --mode=adversary --epsilon=0.062 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model</CommandLineArguments>
+    <CommandLineArguments>--dataset=mnist --data_path=E:\Projects\Dataset\mnist\ --batch_size=64 --mode=adversary --epsilon=0.1 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\mnistencoder.model</CommandLineArguments>
     <InterpreterId>CondaEnv|CondaEnv|Python3-8Cuda10-2</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -39,6 +39,9 @@
     </Compile>
     <Compile Include="Model\CNN.py" />
     <Compile Include="Model\Encoder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\MetaClassifier.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Model\Reconstruct.py" />

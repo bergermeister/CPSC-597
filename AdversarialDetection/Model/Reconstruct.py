@@ -2,6 +2,7 @@
 ##
 # @package CNN
 #
+import os
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -53,7 +54,8 @@ class Reconstruct( nn.Module ):
       cnn.cl3.register_forward_hook( self.Hook( 'cl3' ) )
 
       # Forward Pass through CNN
-      cnn( input )
+      with torch.no_grad():
+         cnn( input )
 
       # Decode first convolutional layer
       out1 = self.sigm( self.dl11( self.activation[ 'cl1' ] ) )

@@ -14,7 +14,7 @@ from Utility.ProgressBar import ProgressBar
 # @par
 # This class provides the Deep Convolutional Neural Network with 3 Convolutional Layers and 1 Linear Layer.
 class Classifier( nn.Module ):
-   def __init__( self, encoder, cudaEnable ):
+   def __init__( self, cudaEnable ):
       super( ).__init__( )
 
       # Record cuda enabled flag
@@ -46,7 +46,8 @@ class Classifier( nn.Module ):
       cnn.cl3.register_forward_hook( self.Hook( 'cl3' ) )
 
       # Forward Pass through CNN
-      cnn( input )
+      with torch.no_grad():
+         cnn( input )
 
       # Classify each convolutional layer
       out1 = self.act( self.ll1( self.mp( F.relu( self.activation[ 'cl1' ] ) ).reshape( -1, 16 * 15 * 15 ) ) )
