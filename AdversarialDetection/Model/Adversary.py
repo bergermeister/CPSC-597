@@ -233,7 +233,45 @@ class Adversary( object ):
       for i in range( len( metaData ) ):
          xSuccess[ i ] = metaData[ i ][ 'image' ]
          ySuccess[ i ] = metaData[ i ][ 'label' ]
-      metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = None ) #use the same batch size as the original loader
+      metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = True ) #use the same batch size as the original loader
+      print( 'Meta Loader Created...' )
+      return( metaData )
+
+   def CreateMetaCNNLoader( self, cnn, recon, dataLoader, advLoader ):
+      print( 'Creating Meta CNN Loader...' )
+      metaData = []
+
+      cnn.eval()
+      recon.eval()
+
+      for batchIndex, ( images, labels ) in enumerate( dataLoader ):
+         if( cnn.cudaEnable ):
+            images, labels = images.cuda( ), labels.cuda( )
+         with torch.no_grad():
+            out1 = images
+            out2, out3, out4 = recon( { 'model' : cnn, 'input' : images } )
+            out = torch.cat( ( out1, out2, out3, out4 ), 1 )
+         for i in range( 0, out.shape[ 0 ] ):
+            metaData.append( { 'image': out[ i ], 'label': 0 } )
+
+      for batchIndex, ( images, labels ) in enumerate( advLoader ):
+         if( cnn.cudaEnable ):
+            images, labels = images.cuda( ), labels.cuda( )
+         with torch.no_grad():
+            out1 = images
+            out2, out3, out4 = recon( { 'model' : cnn, 'input' : images } )
+            out = torch.cat( ( out1, out2, out3, out4 ), 1 )
+         for i in range( 0, out.shape[ 0 ] ):
+            metaData.append( { 'image': out[ i ], 'label': 1 } )
+
+      #xShape   = metaData[ 0 ][ 'image' ].size( ) # DMP.GetOutputShape( dataLoader )
+      print( metaData[ 0 ][ 'image' ].size( ) )
+      xSuccess = torch.zeros( len( metaData ), metaData[ 0 ][ 'image' ].size( )[ 0 ], metaData[ 0 ][ 'image' ].size( )[ 1 ], metaData[ 0 ][ 'image' ].size( )[ 2 ] )
+      ySuccess = torch.zeros( len( metaData ), dtype = torch.long )
+      for i in range( len( metaData ) ):
+         xSuccess[ i ] = metaData[ i ][ 'image' ]
+         ySuccess[ i ] = metaData[ i ][ 'label' ]
+      metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = True ) #use the same batch size as the original loader
       print( 'Meta Loader Created...' )
       return( metaData )
 

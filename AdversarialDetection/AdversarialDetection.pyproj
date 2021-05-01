@@ -44,6 +44,9 @@
     <Compile Include="Model\MetaClassifier.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Model\MetaCNN.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Model\Reconstruct.py" />
     <Compile Include="Utility\Data.py" />
     <Compile Include="Utility\DataManagerPytorch.py" />
