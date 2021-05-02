@@ -265,7 +265,6 @@ class Adversary( object ):
             metaData.append( { 'image': out[ i ], 'label': 1 } )
 
       #xShape   = metaData[ 0 ][ 'image' ].size( ) # DMP.GetOutputShape( dataLoader )
-      print( metaData[ 0 ][ 'image' ].size( ) )
       xSuccess = torch.zeros( len( metaData ), metaData[ 0 ][ 'image' ].size( )[ 0 ], metaData[ 0 ][ 'image' ].size( )[ 1 ], metaData[ 0 ][ 'image' ].size( )[ 2 ] )
       ySuccess = torch.zeros( len( metaData ), dtype = torch.long )
       for i in range( len( metaData ) ):

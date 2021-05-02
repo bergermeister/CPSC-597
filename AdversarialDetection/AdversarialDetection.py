@@ -113,7 +113,7 @@ def Main( ):
 
       successLoader = adversary.CreateSuccessLoader( 'cuda', data.test_loader )
       advloader, results = adversary.PGDAttack( "cuda", successLoader, epsilon, epsilon / 10.0, 10, -1, 1, False )
-      metaloader = adversary.CreateMetaLoader( cnn, classifier, successLoader, advloader )
+      metaloader = adversary.CreateMetaLoader( cnn, classifier, data.test_loader, advloader )
       acc = meta.Test( metaloader, args.batch_size )
       if( acc > meta.accuracy ):
          Save( meta, acc, meta.epochs + args.epochs, args.metann )
