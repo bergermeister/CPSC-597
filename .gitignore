@@ -138,3 +138,5 @@ latex/
 # Application Output
 Images/
 
+# Python Virtual Environments
+Python3-7Cuda10-2

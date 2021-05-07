@@ -1,90 +1,53 @@
+import os
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from time import time
 from Utility.ProgressBar import ProgressBar
+from Model.CNN import CNN
+from Model.Reconstructor import Reconstructor
+from Model.Detector import Detector
 
 class MetaCNN( nn.Module ):
-   def __init__( self, channels, cudaEnable ):
+   def __init__( self, channels, args ):
       super( ).__init__( )
 
-        # Record cuda enabled flag
-      self.channels = channels
-      self.cudaEnable = ( cudaEnable == 'True' )
-      self.accuracy   = 0
-      self.epochs     = 0
-      self.indices    = {}
+      self.cudaEnable = args.cuda
 
-      # Convolutional Layers
-      self.cl1 = nn.Conv2d( self.channels, 16, 5, 1, 1 ) # Convolutional Layer 1 (16, 16, 16)
-      self.cl2 = nn.Conv2d(            16, 32, 5, 1, 1 ) # Convolutional Layer 2 (32,  8 , 8)
-      self.cl3 = nn.Conv2d(            32, 64, 5, 1, 1 ) # Convolutional Layer 3 (64,  4,  4)
-      self.mp  = nn.MaxPool2d( 2, stride = 2, return_indices = True ) # Max Pooling
-      self.ll1 = nn.Linear( 64 * 2 * 2, 256 )
-      self.ll2 = nn.Linear( 256, 2 )
-      self.act = nn.Sigmoid( )
+      self.cnn = CNN( channels, args.cuda )
+      self.rec = Reconstructor( channels, args.cuda )
+      self.det = Detector( channels * 4, args.cuda )
 
-      # Define Loss Criteria
-      self.lossFunc = nn.CrossEntropyLoss( )
-
-      if( self.cudaEnable ):
-         self.cuda( )
+      if( os.path.exists( args.cnn ) ):
+         print( "Meta CNN: Loading CNN state" )
+         self.cnn.Load( args.cnn )
+      if( os.path.exists( args.recon ) ):
+         print( "Meta CNN: Loading Reconstructor state" )
+         self.rec.Load( args.recon )
+      if( os.path.exists( args.detect ) ):
+         print( "Meta CNN: Loading Detector state" )
+         self.det.Load( args.detect )
 
    def forward( self, x ):
-      out, self.indices[ 'mp1' ] = self.mp( F.relu( self.cl1(   x ) ) )
-      out, self.indices[ 'mp2' ] = self.mp( F.relu( self.cl2( out ) ) )
-      out, self.indices[ 'mp3' ] = self.mp( F.relu( self.cl3( out ) ) )
-      out = out.reshape( -1, 64 * 2 * 2 )
-      out = F.relu( self.ll1( out ) )
-      out = self.ll2( out )
-      out = self.act( out )
+      with torch.no_grad():
+         x1, x2, x3 = self.rec( { 'model' : self.cnn, 'input' : x } )   # Reconstruct images after cl1, cl2, and cl3
+         xM = torch.cat( ( x, x1, x2, x3 ), 1 )                         # Concatenate x, x1, x2, and x3
+         _, adv = self.det( xM ).max( 1 )                               # Detect Adversarial images
+         _, y   = self.cnn( x ).max( 1 )                                # Forward pass standard CNN
+         out = torch.zeros( adv.size( 0 ), dtype = torch.long, device = 'cuda' )
+         for i in range( adv.size( 0 ) ):
+            if( adv[ i ] == 1 ):
+               out[ i ] = 10
+            else:
+               out[ i ] = y[ i ]
       return( out )
 
-   def Load( self, path ):
-      state = torch.load( path )
-      self.load_state_dict( state[ 'model' ] )
-      self.accuracy = state[ 'acc' ]
-      self.epochs   = state[ 'epoch' ]
-
-   def Train( self, loader, epochs, batch_size ):
-      self.train( True )   # Place the model into training mode
-
-      optimizer = torch.optim.Adam( self.parameters( ), lr = 0.0002, weight_decay = 0.00001 )
-      progress = ProgressBar( 40, 80 )
-      beginTrain = time( )
-      print( "Begin Training..." )
-      for epoch in range( epochs ):
-         beginEpoch = time( )
-
-         trainLoss = 0
-         total     = 0
-         correct   = 0
-         for batchIndex, ( input, labels ) in enumerate( loader ):
-            # Forward pass
-            if( self.cudaEnable ):
-               input, labels = input.cuda( ), labels.cuda( )
-            out = self( input )
-            loss = self.lossFunc( out, labels )
-            
-            # Backward propagation
-            optimizer.zero_grad( )  # Clear Gradients
-            loss.backward( )        # Calculate Gradients
-            optimizer.step( )       # Update Weights
-            
-            # Logging
-            _, predicted = out.max( 1 )
-            trainLoss    += loss.item( )
-            total        += ( labels.size( 0 ) )
-            correct      += predicted.eq( labels ).sum( ).item( )
-            progress.Update( batchIndex, len( loader ), 'Epoch: %d | Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( self.epochs + epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
-      print( 'End Training...' )
-
    def Test( self, loader, batch_size ):
-      self.eval( )         # Place the model into test/evaluation mode
+      self.cnn.eval( )  # Place the model into test/evaluation mode
+      self.rec.eval( )  # Place the model into test/evaluation mode
+      self.det.eval( )  # Place the model into test/evaluation mode
       progress = ProgressBar( 40, 80 )
 
-      testLoss = 0
       total    = 0
       correct  = 0
       print( 'Begin Evaluation...' )
@@ -94,15 +57,12 @@ class MetaCNN( nn.Module ):
             if( self.cudaEnable ):
                input, labels = input.cuda( ), labels.cuda( )
             out = self( input )
-            loss = self.lossFunc( out, labels )
 
             # Logging
-            _, predicted = out.max( 1 )
-            testLoss     += loss.item( )
             total        += ( labels.size( 0 ) )
-            correct      += predicted.eq( labels ).sum( ).item( )
-            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+            correct      += out.eq( labels ).sum( ).item( )
+            progress.Update( batchIndex, len( loader ), '| Acc: %.3f%% (%d/%d)'
+                             % ( 100. * correct / total, correct, total ) )
       print( 'End Evaluation...' )
 
       return( 100. * correct / total )

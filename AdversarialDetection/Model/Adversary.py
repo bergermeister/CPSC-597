@@ -178,67 +178,8 @@ class Adversary( object ):
       print( 'Success Loader Created...' )
       return( successLoader )
    
-   def CreateCombinedLoader( self, dataLoader, advLoader ):
-      print( 'Creating Combined Loader...' )
-      combinedData = []
-
-      for batchIndex, ( images, labels ) in enumerate( dataLoader ):
-         for i in range( 0, images.shape[ 0 ] ):
-            combinedData.append( { 'image': images[ i ], 'label': labels[ i ] } )
-
-      for batchIndex, ( images, labels ) in enumerate( advLoader ):
-         for i in range( 0, images.shape[ 0 ] ):
-            combinedData.append( { 'image': images[ i ], 'label': labels[ i ] } )
-
-      xShape   = DMP.GetOutputShape( dataLoader )
-      xSuccess = torch.zeros( len( combinedData ), xShape[ 0 ], xShape[ 1 ], xShape[ 2 ] )
-      ySuccess = torch.zeros( len( combinedData ), dtype = torch.long )
-      for i in range( len( combinedData ) ):
-         xSuccess[ i ] = combinedData[ i ][ 'image' ]
-         ySuccess[ i ] = combinedData[ i ][ 'label' ]
-      combinedData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = None ) #use the same batch size as the original loader
-      print( 'Combined Loader Created...' )
-      return( combinedData )
-
-   def CreateMetaLoader( self, cnn, ann, dataLoader, advLoader ):
-      print( 'Creating Meta Loader...' )
-      metaData = []
-
-      cnn.eval()
-      ann.eval()
-
-      for batchIndex, ( images, labels ) in enumerate( dataLoader ):
-         if( cnn.cudaEnable ):
-            images, labels = images.cuda( ), labels.cuda( )
-         with torch.no_grad():
-            out1 = cnn( images )
-            out2, out3, out4 = ann( { 'model' : cnn, 'input' : images } )
-            out = torch.cat( ( out1, out2, out3, out4 ), 1 )
-         for i in range( 0, out.shape[ 0 ] ):
-            metaData.append( { 'image': out[ i ], 'label': 0 } )
-
-      for batchIndex, ( images, labels ) in enumerate( advLoader ):
-         if( cnn.cudaEnable ):
-            images, labels = images.cuda( ), labels.cuda( )
-         with torch.no_grad():
-            out1 = cnn( images )
-            out2, out3, out4 = ann( { 'model' : cnn, 'input' : images } )
-            out = torch.cat( ( out1, out2, out3, out4 ), 1 )
-         for i in range( 0, out.shape[ 0 ] ):
-            metaData.append( { 'image': out[ i ], 'label': 1 } )
-
-      #xShape   = metaData[ 0 ][ 'image' ].size( ) # DMP.GetOutputShape( dataLoader )
-      xSuccess = torch.zeros( len( metaData ), 40 )
-      ySuccess = torch.zeros( len( metaData ), dtype = torch.long )
-      for i in range( len( metaData ) ):
-         xSuccess[ i ] = metaData[ i ][ 'image' ]
-         ySuccess[ i ] = metaData[ i ][ 'label' ]
-      metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = True ) #use the same batch size as the original loader
-      print( 'Meta Loader Created...' )
-      return( metaData )
-
-   def CreateMetaCNNLoader( self, cnn, recon, dataLoader, advLoader ):
-      print( 'Creating Meta CNN Loader...' )
+   def CreateDetectorLoader( self, cnn, recon, dataLoader, advLoader ):
+      print( 'Creating Detector Loader...' )
       metaData = []
 
       cnn.eval()
@@ -264,74 +205,35 @@ class Adversary( object ):
          for i in range( 0, out.shape[ 0 ] ):
             metaData.append( { 'image': out[ i ], 'label': 1 } )
 
-      #xShape   = metaData[ 0 ][ 'image' ].size( ) # DMP.GetOutputShape( dataLoader )
       xSuccess = torch.zeros( len( metaData ), metaData[ 0 ][ 'image' ].size( )[ 0 ], metaData[ 0 ][ 'image' ].size( )[ 1 ], metaData[ 0 ][ 'image' ].size( )[ 2 ] )
       ySuccess = torch.zeros( len( metaData ), dtype = torch.long )
       for i in range( len( metaData ) ):
          xSuccess[ i ] = metaData[ i ][ 'image' ]
          ySuccess[ i ] = metaData[ i ][ 'label' ]
       metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = True ) #use the same batch size as the original loader
-      print( 'Meta Loader Created...' )
+      print( 'Detector Loader Created...' )
       return( metaData )
 
-   #def Plot( self ):
-      ######################################################################
-      # Results
-      # -------
-      # 
-      # Accuracy vs Epsilon
-      # ~~~~~~~~~~~~~~~~~~~
-      # 
-      # The first result is the accuracy versus epsilon plot. As alluded to
-      # earlier, as epsilon increases we expect the test accuracy to decrease.
-      # This is because larger epsilons mean we take a larger step in the
-      # direction that will maximize the loss. Notice the trend in the curve is
-      # not linear even though the epsilon values are linearly spaced. For
-      # example, the accuracy at :math:`\epsilon=0.05` is only about 4% lower
-      # than :math:`\epsilon=0`, but the accuracy at :math:`\epsilon=0.2` is 25%
-      # lower than :math:`\epsilon=0.15`. Also, notice the accuracy of the model
-      # hits random accuracy for a 10-class classifier between
-      # :math:`\epsilon=0.25` and :math:`\epsilon=0.3`.
-      # 
-      #plt.figure(figsize=(5,5))
-      #plt.plot(epsilons, accuracies, "*-")
-      #plt.yticks(np.arange(0, 1.1, step=0.1))
-      #plt.xticks(np.arange(0, .35, step=0.05))
-      #plt.title("Accuracy vs Epsilon")
-      #plt.xlabel("Epsilon")
-      #plt.ylabel("Accuracy")
-      #plt.show()
+   def CreateMetaLoader( self, dataLoader, advLoader ):
+      print( 'Creating Meta CNN Loader...' )
+      metaData = []
 
-      ######################################################################
-      # Sample Adversarial Examples
-      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      # 
-      # Remember the idea of no free lunch? In this case, as epsilon increases
-      # the test accuracy decreases **BUT** the perturbations become more easily
-      # perceptible. In reality, there is a tradeoff between accuracy
-      # degredation and perceptibility that an attacker must consider. Here, we
-      # show some examples of successful adversarial examples at each epsilon
-      # value. Each row of the plot shows a different epsilon value. The first
-      # row is the :math:`\epsilon=0` examples which represent the original
-      # “clean” images with no perturbation. The title of each image shows the
-      # “original classification -> adversarial classification.” Notice, the
-      # perturbations start to become evident at :math:`\epsilon=0.15` and are
-      # quite evident at :math:`\epsilon=0.3`. However, in all cases humans are
-      # still capable of identifying the correct class despite the added noise.
-      # 
-      # Plot several examples of adversarial samples at each epsilon
-      #cnt = 0
-      #plt.figure(figsize=(8,10))
-      #for i in range(len(epsilons)):
-      #    for j in range(len(examples[i])):
-      #        cnt += 1
-      #        plt.subplot(len(epsilons),len(examples[0]),cnt)
-      #        plt.xticks([], [])
-      #        plt.yticks([], [])
-      #        if j == 0:
-      #            plt.ylabel("Eps: {}".format(epsilons[i]), fontsize=14)
-      #        orig,adv,ex = examples[i][j]
-      #        plt.title("{} -> {}".format(orig, adv))
-      #        plt.imshow(ex, cmap="gray")
-      #plt.tight_layout()
-      #plt.show()
+      for batchIndex, ( images, labels ) in enumerate( dataLoader ):
+         images, labels = images.cuda( ), labels.cuda( )
+         for i in range( 0, images.shape[ 0 ] ):
+            metaData.append( { 'image': images[ i ], 'label': labels[ i ] } )
+
+      for batchIndex, ( images, labels ) in enumerate( advLoader ):
+         images, labels = images.cuda( ), labels.cuda( )
+         for i in range( 0, images.shape[ 0 ] ):
+            metaData.append( { 'image': images[ i ], 'label': 10 } )
+
+      xSuccess = torch.zeros( len( metaData ), metaData[ 0 ][ 'image' ].size( )[ 0 ], metaData[ 0 ][ 'image' ].size( )[ 1 ], metaData[ 0 ][ 'image' ].size( )[ 2 ] )
+      ySuccess = torch.zeros( len( metaData ), dtype = torch.long )
+      for i in range( len( metaData ) ):
+         xSuccess[ i ] = metaData[ i ][ 'image' ]
+         ySuccess[ i ] = metaData[ i ][ 'label' ]
+      metaData = DMP.TensorToDataLoader( xSuccess, ySuccess, transforms = None, batchSize = dataLoader.batch_size, randomizer = True ) #use the same batch size as the original loader
+      print( 'Meta CNN Loader Created...' )
+      return( metaData )
+   

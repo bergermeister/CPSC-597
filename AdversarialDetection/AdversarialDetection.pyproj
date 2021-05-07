@@ -13,9 +13,9 @@
     <RootNamespace>AdversarialDetection</RootNamespace>
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=mnist --data_path=E:\Projects\Dataset\mnist\ --batch_size=64 --mode=adversary --epsilon=0.1 --epochs=100 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10encoder.model --classifier=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10classifier.model --encoder=E:\Projects\CPSC-597\AdversarialDetection\State\mnistencoder.model</CommandLineArguments>
-    <InterpreterId>CondaEnv|CondaEnv|Python3-8Cuda10-2</InterpreterId>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10 --batch_size=64 --mode=test --epsilon=0.1 --epochs=1 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --detect=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10detect.model </CommandLineArguments>
+    <InterpreterId>MSBuild|Python3-7Cuda10-2|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,20 +34,14 @@
     <Compile Include="Model\Adversary.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Model\Classifier.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Model\CNN.py" />
-    <Compile Include="Model\Encoder.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Model\MetaClassifier.py">
+    <Compile Include="Model\Detector.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Model\MetaCNN.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Model\Reconstruct.py" />
+    <Compile Include="Model\Reconstructor.py" />
     <Compile Include="Utility\Data.py" />
     <Compile Include="Utility\DataManagerPytorch.py" />
     <Compile Include="Utility\ProgressBar.py">
@@ -57,6 +51,17 @@
   <ItemGroup>
     <InterpreterReference Include="CondaEnv|CondaEnv|Python3-8Cuda10-2" />
     <InterpreterReference Include="CondaEnv|CondaEnv|PyTorchCuda10-2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="Python3-7Cuda10-2\">
+      <Id>Python3-7Cuda10-2</Id>
+      <Version>3.7</Version>
+      <Description>Python3-7Cuda10-2 (Python 3.7 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

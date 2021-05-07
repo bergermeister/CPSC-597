@@ -1,10 +1,13 @@
+
 ##
 # @package CNN
 #
+import os
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
+from torchvision import utils
 from time import time
 from Utility.ProgressBar import ProgressBar
 
@@ -13,25 +16,30 @@ from Utility.ProgressBar import ProgressBar
 # @details
 # @par
 # This class provides the Deep Convolutional Neural Network with 3 Convolutional Layers and 1 Linear Layer.
-class Classifier( nn.Module ):
-   def __init__( self, cudaEnable ):
+class Reconstructor( nn.Module ):
+   def __init__( self, channels, cudaEnable ):
       super( ).__init__( )
 
       # Record cuda enabled flag
+      self.channels = channels
       self.cudaEnable = ( cudaEnable == 'True' )
       self.accuracy   = 0
       self.epochs     = 0
       self.activation = {}
 
-      # Linear Layers
-      self.ll1 = nn.Linear( 16 * 15 * 15, 10 )
-      self.ll2 = nn.Linear( 32 *  6 *  6, 10 )
-      self.ll3 = nn.Linear( 64 *  2 *  2, 10 )
-      self.mp  = nn.MaxPool2d( 2, stride = 2 ) # Max Pooling
-      self.act = nn.Softmax( dim = 1 )
+      # Reconstruction Networks
+      self.dl11 = nn.ConvTranspose2d( 16, self.channels, 5, 1, 1 )
+      self.dl21 = nn.ConvTranspose2d( 32,            16, 5, 1, 1 )
+      self.dl22 = nn.ConvTranspose2d( 16, self.channels, 5, 1, 1 ) 
+      self.dl31 = nn.ConvTranspose2d( 64,            32, 5, 1, 1 )
+      self.dl32 = nn.ConvTranspose2d( 32,            16, 4, 1, 0 )
+      self.dl33 = nn.ConvTranspose2d( 16, self.channels, 5, 1, 1 )
+      self.mp   = nn.MaxUnpool2d( 2, 2 )
+      self.relu = nn.ReLU( True )
+      self.sigm = nn.Sigmoid( )
 
       # Define Loss Criteria
-      self.lossFunc = nn.CrossEntropyLoss( )
+      self.lossFunc =  nn.MSELoss( )
 
       if( self.cudaEnable ):
          self.cuda( )
@@ -49,10 +57,20 @@ class Classifier( nn.Module ):
       with torch.no_grad():
          cnn( input )
 
-      # Classify each convolutional layer
-      out1 = self.act( self.ll1( self.mp( F.relu( self.activation[ 'cl1' ] ) ).reshape( -1, 16 * 15 * 15 ) ) )
-      out2 = self.act( self.ll2( self.mp( F.relu( self.activation[ 'cl2' ] ) ).reshape( -1, 32 *  6 *  6 ) ) )
-      out3 = self.act( self.ll3( self.mp( F.relu( self.activation[ 'cl3' ] ) ).reshape( -1, 64 *  2 *  2 ) ) )
+      # Decode first convolutional layer
+      out1 = self.sigm( self.dl11( self.activation[ 'cl1' ] ) )
+
+      # Decode second convolutional layer
+      out2 = self.relu( self.dl21( self.activation[ 'cl2' ] ) )
+      out2 = self.mp( out2, cnn.indices[ 'mp1' ] )
+      out2 = self.sigm( self.dl22( out2 ) )
+
+      # Decode third convolutional layer
+      out3 = self.relu( self.dl31( self.activation[ 'cl3' ] ) )
+      out3 = self.mp( out3, cnn.indices[ 'mp2' ] )
+      out3 = self.relu( self.dl32( out3 ) )
+      out3 = self.mp( out3, cnn.indices[ 'mp1' ] )
+      out3 = self.sigm( self.dl33( out3 ) )
 
       return( out1, out2, out3 )
 
@@ -73,64 +91,62 @@ class Classifier( nn.Module ):
       for epoch in range( epochs ):
          beginEpoch = time( )
 
-         trainLoss = 0
-         total     = 0
-         correct   = 0
+         images = 0
+         out1   = 0
+         out2   = 0
+         out3   = 0
+         total  = 0
          for batchIndex, ( images, labels ) in enumerate( loader ):
             # Forward pass
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
             out1, out2, out3 = self( { 'model' : cnn, 'input' : images } )
-            loss1 = self.lossFunc( out1, labels )
-            loss2 = self.lossFunc( out2, labels )
-            loss3 = self.lossFunc( out3, labels )
-            
-            # Backward propagation
+            loss1 = self.lossFunc( out1, images )
+            loss2 = self.lossFunc( out2, images )
+            loss3 = self.lossFunc( out3, images )
+
+            # Backward Propagation
             optimizer.zero_grad( )  # Clear Gradients
             loss1.backward( )       # Calculate Gradients
             loss2.backward( )       # Calculate Gradients
             loss3.backward( )       # Calculate Gradients
-            optimizer.step( )       # Update Weights
-            
+            optimizer.step( )
+            total = total + loss1.item( ) + loss2.item( ) + loss3.item( )
+
             # Logging
-            _, predicted1 = out1.max( 1 )
-            _, predicted2 = out2.max( 1 )
-            _, predicted3 = out3.max( 1 )
-            trainLoss    += loss1.item( ) + loss2.item( ) + loss3.item( )
-            total        += ( labels.size( 0 ) * 3 )
-            correct      += predicted1.eq( labels ).sum( ).item( ) + predicted2.eq( labels ).sum( ).item( ) + predicted3.eq( labels ).sum( ).item( )
-            progress.Update( batchIndex, len( loader ), 'Epoch: %d | Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( self.epochs + epoch, trainLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+            progress.Update( batchIndex, len( loader ), 'Epoch: {} | Loss: {}'.format( self.epochs + epoch, total ) )
+
+         folder = 'Images/Reconstruct/'
+         if( not os.path.exists( folder ) ):
+            os.mkdir( folder )
+         for i in range( len( images ) ):
+            utils.save_image( images[ i ], 'Images/Reconstruct/Epoch{}-{}I.png'.format( epoch, i ) )
+            utils.save_image( out1[ i ],   'Images/Reconstruct/Epoch{}-{}D1.png'.format( epoch, i ) )
+            utils.save_image( out2[ i ],   'Images/Reconstruct/Epoch{}-{}D2.png'.format( epoch, i ) )
+            utils.save_image( out3[ i ],   'Images/Reconstruct/Epoch{}-{}D3.png'.format( epoch, i ) )
       print( 'End Training...' )
 
-   def Test( self, cnn, loader, batch_size ):
+   def Test( self, loader, batch_size ):
       self.eval( ) # Place the model into test/evaluation mode
-      cnn.eval( )          # Place CNN into evaluation mode
       progress = ProgressBar( 40, 80 )
 
       testLoss = 0
       total    = 0
       correct  = 0
+
       print( 'Begin Evaluation...' )
       with torch.no_grad( ):
          for batchIndex, ( images, labels ) in enumerate( loader ):
-            # Forward pass
             if( self.cudaEnable ):
                images, labels = images.cuda( ), labels.cuda( )
             out1, out2, out3 = self( { 'model' : cnn, 'input' : images } )
-            loss1 = self.lossFunc( out1, labels )
-            loss2 = self.lossFunc( out2, labels )
-            loss3 = self.lossFunc( out3, labels )
+            loss1 = self.lossFunc( out1, images )
+            loss2 = self.lossFunc( out2, images )
+            loss3 = self.lossFunc( out3, images )
+            total = total + loss1.item( ) + loss2.item( ) + loss3.item( )
 
             # Logging
-            _, predicted1 = out1.max( 1 )
-            _, predicted2 = out2.max( 1 )
-            _, predicted3 = out3.max( 1 )
-            testLoss    += loss1.item( ) + loss2.item( ) + loss3.item( )
-            total        += ( labels.size( 0 ) * 3 )
-            correct      += predicted1.eq( labels ).sum( ).item( ) + predicted2.eq( labels ).sum( ).item( ) + predicted3.eq( labels ).sum( ).item( )
-            progress.Update( batchIndex, len( loader ), '| Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % ( testLoss / ( batchIndex + 1 ), 100. * correct / total, correct, total ) )
+            progress.Update( batchIndex, len( loader ), 'Epoch: {} | Loss: {}'.format( self.epochs + epoch, total ) )
       print( 'End Evaluation...' )
 
       return( 100. * correct / total )

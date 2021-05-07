@@ -4,19 +4,24 @@ from torch.nn import functional as F
 from time import time
 from Utility.ProgressBar import ProgressBar
 
-class MetaClassifier( nn.Module ):
-   def __init__( self, cudaEnable ):
+class Detector( nn.Module ):
+   def __init__( self, channels, cudaEnable ):
       super( ).__init__( )
 
-      # Record cuda enabled flag
+        # Record cuda enabled flag
+      self.channels = channels
       self.cudaEnable = ( cudaEnable == 'True' )
       self.accuracy   = 0
       self.epochs     = 0
+      self.indices    = {}
 
-      # Linear Layers
-      self.ll1 = nn.Linear(  40,   80 )
-      self.ll2 = nn.Linear(  80,  160 )
-      self.ll3 = nn.Linear( 160,    2 )
+      # Convolutional Layers
+      self.cl1 = nn.Conv2d( self.channels, 16, 5, 1, 1 ) # Convolutional Layer 1 (16, 16, 16)
+      self.cl2 = nn.Conv2d(            16, 32, 5, 1, 1 ) # Convolutional Layer 2 (32,  8 , 8)
+      self.cl3 = nn.Conv2d(            32, 64, 5, 1, 1 ) # Convolutional Layer 3 (64,  4,  4)
+      self.mp  = nn.MaxPool2d( 2, stride = 2, return_indices = True ) # Max Pooling
+      self.ll1 = nn.Linear( 64 * 2 * 2, 256 )
+      self.ll2 = nn.Linear( 256, 2 )
       self.act = nn.Sigmoid( )
 
       # Define Loss Criteria
@@ -26,10 +31,13 @@ class MetaClassifier( nn.Module ):
          self.cuda( )
 
    def forward( self, x ):
-      out = F.relu( self.ll1( x ) )
-      out = F.relu( self.ll2( out ) )
-      out = self.act( self.ll3( out ) )
-      
+      out, self.indices[ 'mp1' ] = self.mp( F.relu( self.cl1(   x ) ) )
+      out, self.indices[ 'mp2' ] = self.mp( F.relu( self.cl2( out ) ) )
+      out, self.indices[ 'mp3' ] = self.mp( F.relu( self.cl3( out ) ) )
+      out = out.reshape( -1, 64 * 2 * 2 )
+      out = F.relu( self.ll1( out ) )
+      out = self.ll2( out )
+      out = self.act( out )
       return( out )
 
    def Load( self, path ):
