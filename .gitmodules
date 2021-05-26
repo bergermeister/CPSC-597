@@ -1,3 +1,6 @@
 [submodule "ViTRobust"]
 	path = ViTRobust
-	url = https://github.com/MetaMain/ViTRobust
+	url = https://github.com/bergermeister/ViTRobust.git
+[submodule "ResNet"]
+	path = ResNet
+	url = https://github.com/bergermeister/pytorch-cifar.git

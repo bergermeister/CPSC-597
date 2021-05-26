@@ -14,8 +14,8 @@
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10 --batch_size=64 --mode=test --epsilon=0.1 --epochs=1 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --detect=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10detect.model </CommandLineArguments>
-    <InterpreterId>MSBuild|Python3-7Cuda10-2|$(MSBuildProjectFullPath)</InterpreterId>
+    <CommandLineArguments>--dataset=cifar10 --data_path=E:\Projects\Dataset\cifar10 --batch_size=128 --mode=test --epsilon=0.1 --epochs=1 --cuda=True --cnn=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10cnn.model --recon=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10recon.model --detect=E:\Projects\CPSC-597\AdversarialDetection\State\cifar10detect.model </CommandLineArguments>
+    <InterpreterId>MSBuild|Python3-7Cuda10-21|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,12 +49,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <InterpreterReference Include="CondaEnv|CondaEnv|Python3-8Cuda10-2" />
-    <InterpreterReference Include="CondaEnv|CondaEnv|PyTorchCuda10-2" />
-  </ItemGroup>
-  <ItemGroup>
-    <Interpreter Include="Python3-7Cuda10-2\">
-      <Id>Python3-7Cuda10-2</Id>
+    <Interpreter Include="..\Python3-7Cuda10-2\">
+      <Id>Python3-7Cuda10-21</Id>
       <Version>3.7</Version>
       <Description>Python3-7Cuda10-2 (Python 3.7 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
